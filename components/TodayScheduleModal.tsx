@@ -77,7 +77,6 @@ export default function TodayScheduleModal({
   const [executionTime, setExecutionTime] = useState(
     initialTime || getCurrentTime(),
   );
-  const [ttl, setTtl] = useState(3600);
   const [volume, setVolume] = useState(50);
 
   const startTime = playbackRange[0];
@@ -117,9 +116,6 @@ export default function TodayScheduleModal({
       const sc = schedule.schedule_config;
       if (sc?.datetime) {
         setExecutionTime(sc.datetime.split("T")[1].substring(0, 5));
-      }
-      if (sc?.ttl) {
-        setTtl(sc.ttl);
       }
 
       if (ac?.type === "YOUTUBE" && ac?.url) {
@@ -203,7 +199,6 @@ export default function TodayScheduleModal({
       schedule_config: {
         type: "ONE_TIME",
         datetime: `${initialDate}T${executionTime}:00`,
-        ttl: ttl,
       },
       action_config: {
         deviceId: selectedDevice,
@@ -248,14 +243,6 @@ export default function TodayScheduleModal({
               placeholder="예: 점심 약속 알림"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="text-base"
-            />
-
-            <Input
-              type="number"
-              label="완료 후 자동 삭제 (초)"
-              value={String(ttl)}
-              onChange={(e) => setTtl(Number(e.target.value))}
               className="text-base"
             />
 

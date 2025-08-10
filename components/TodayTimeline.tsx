@@ -29,11 +29,43 @@ const TodayTimeline = ({ schedules, isLoading, onTimeClick }: ITodayTimelineProp
 
   const getSchedulesForHour = (hour: number) => {
     return schedules
-      .filter(schedule => {
-        const scheduleDate = new Date(schedule.schedule_config.datetime);
-        return scheduleDate.getHours() === hour;
+      .filter((schedule) => {
+        console.log("ho")
+        if (schedule.schedule_config.type === 'ONE_TIME') {
+          const scheduleDate = new Date(schedule.schedule_config.datetime);
+          return scheduleDate.getHours() === hour;
+        } else if (
+          schedule.schedule_config.type === 'RECURRING' ||
+          schedule.schedule_config.type === 'HOURLY'
+        ) {
+          const scheduleTime = schedule.schedule_config.time;
+          console.log(scheduleTime)
+          if (scheduleTime) {
+            const [scheduleHour] = scheduleTime.split(':').map(Number);
+            return scheduleHour === hour;
+          }
+        }
+        return false;
       })
-      .sort((a, b) => new Date(a.schedule_config.datetime).getTime() - new Date(b.schedule_config.datetime).getTime());
+      .sort((a, b) => {
+        const getTimeValue = (schedule: any) => {
+          if (schedule.schedule_config.type === 'ONE_TIME') {
+            return new Date(schedule.schedule_config.datetime).getTime();
+          } else if (
+            schedule.schedule_config.type === 'RECURRING' ||
+            schedule.schedule_config.type === 'HOURLY'
+          ) {
+            const [hour, minute] = schedule.schedule_config.time
+              .split(':')
+              .map(Number);
+            const date = new Date();
+            date.setHours(hour, minute, 0, 0);
+            return date.getTime();
+          }
+          return 0;
+        };
+        return getTimeValue(a) - getTimeValue(b);
+      });
   };
 
   return (
