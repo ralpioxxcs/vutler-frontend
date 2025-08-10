@@ -191,7 +191,7 @@ export default function TodayScheduleModal({
     if (finalTitle === "") {
       if (actionType === "TTS") {
         finalTitle = ttsText
-          ? `TTS: ${ttsText.substring(0, 20)}...`
+          ? `${ttsText.substring(0, 20)}...`
           : "새로운 TTS 알림";
       } else {
         finalTitle = youtubeVideoTitle || "YouTube 재생";
@@ -306,16 +306,37 @@ export default function TodayScheduleModal({
                   <Input
                     label="유튜브 URL"
                     value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    className="text-base"
+                    onChange={(e) => handleYoutubeUrlChange(e.target.value)}
                   />
-                  <Input
-                    type="number"
-                    label="재생 시간 (초)"
-                    value={String(duration)}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="text-base"
-                  />
+                  {isFetchingVideoInfo && <Spinner size="sm" />}
+                  {totalDuration !== null && (
+                    <div className="p-3 bg-gray-100 rounded-md text-sm text-gray-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <span>재생 구간 선택</span>
+                        <span className="font-semibold">
+                          {formatSeconds(duration)} / 총{" "}
+                          {formatSeconds(totalDuration)}
+                        </span>
+                      </div>
+                      <div className="px-2">
+                        <Slider
+                          range
+                          min={0}
+                          max={totalDuration}
+                          value={playbackRange}
+                          onChange={(value) =>
+                            setPlaybackRange(value as [number, number])
+                          }
+                          step={1}
+                          allowCross={false}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs mt-1">
+                        <span>{formatSeconds(playbackRange[0])}</span>
+                        <span>{formatSeconds(playbackRange[1])}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

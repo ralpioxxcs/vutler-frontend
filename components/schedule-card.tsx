@@ -217,41 +217,47 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
           <h2 className="text-base font-semibold text-gray-800 truncate">
             {schedule.title}
           </h2>
-          <div className="flex items-center gap-4 mt-2">
-            <ScheduleTypeBadge config={schedule.schedule_config} />
-            <ActionBadge config={schedule.action_config} />
-            <div className="flex items-center text-xs text-gray-500">
+          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 sm:gap-4">
+            <div className="hidden sm:flex">
+              <ScheduleTypeBadge config={schedule.schedule_config} />
+            </div>
+            <div className="hidden sm:flex">
+              <ActionBadge config={schedule.action_config} />
+            </div>
+            <div className="flex items-center">
               <ClockIcon className="w-4 h-4 mr-1" />
-              <span>{displayTime}</span>
+              <span className="truncate">{displayTime}</span>
               {schedule.schedule_config.type === 'ONE_TIME' &&
                 schedule.schedule_config.ttl && (
-                  <span className="ml-2 text-blue-500">
+                  <span className="ml-2 text-blue-500 hidden sm:inline">
                     ({formatTtl(schedule.schedule_config.ttl)})
                   </span>
                 )}
             </div>
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDuplicate();
-          }}
-          className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <DocumentDuplicateIcon className="w-5 h-5 text-gray-500" />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (window.confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
-              handleDelete();
-            }
-          }}
-          className="ml-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <TrashIcon className="w-5 h-5 text-gray-500" />
-        </button>
+        <div className="hidden sm:flex items-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDuplicate();
+            }}
+            className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <DocumentDuplicateIcon className="w-5 h-5 text-gray-500" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
+                handleDelete();
+              }
+            }}
+            className="ml-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <TrashIcon className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
       </div>
 
       {isModalOpen && !isClosed && (

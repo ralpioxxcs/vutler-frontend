@@ -93,7 +93,7 @@ export default function ScheduleFormModal({
     queryFn: getDevice,
   });
 
-  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } = 
+  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } =
     useMutation({
       mutationFn: getYoutubeVideoInfo,
       onSuccess: (data) => {
@@ -193,10 +193,22 @@ export default function ScheduleFormModal({
     if (finalTitle === "") {
       if (actionType === "TTS") {
         finalTitle = ttsText
-          ? `TTS: ${ttsText.substring(0, 20)}...`
+          ? `${ttsText.substring(0, 20)}...`
           : "새로운 TTS 알림";
       } else {
         finalTitle = youtubeVideoTitle || "YouTube 재생";
+      }
+    }
+
+    let urlForPayload = youtubeUrl;
+    if (actionType === "YOUTUBE") {
+      const videoId = extractVideoId(youtubeUrl);
+      if (videoId) {
+        let url = `https://www.youtube.com/watch?v=${videoId}`;
+        if (startTime > 0) {
+          url += `&t=${Math.round(startTime)}s`;
+        }
+        urlForPayload = url;
       }
     }
 
@@ -212,7 +224,7 @@ export default function ScheduleFormModal({
         deviceId: selectedDevice,
         type: actionType,
         text: ttsText,
-        url: youtubeUrl,
+        url: urlForPayload,
         startTime: Math.round(startTime),
         duration: Math.round(duration),
         volume: volume,
