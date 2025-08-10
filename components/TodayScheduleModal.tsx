@@ -15,12 +15,15 @@ import {
   Tabs,
 } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
 } from "@/pages/api/schedule";
 import { getDevice } from "@/pages/api/device";
+import { getYoutubeVideoInfo } from "@/pages/api/youtube";
 import type { Device } from "Type";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
@@ -31,16 +34,34 @@ const getCurrentTime = () => {
   return `${hours}:${minutes}`;
 };
 
+const formatSeconds = (seconds: number) => {
+  if (isNaN(seconds) || seconds < 0) return "0분 0초";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}분 ${secs}초`;
+};
+
+const extractVideoId = (url: string): string | null => {
+  const regex =
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const matches = url.match(regex);
+  return matches ? matches[1] : null;
+};
+
 interface ITodayScheduleModalProps {
   onClose: () => void;
   schedule?: any;
-  initialTime?: string; // New prop
+  initialTime?: string;
+  initialDate?: string;
 }
+
+type ActionType = "TTS" | "YOUTUBE";
 
 export default function TodayScheduleModal({
   onClose,
   schedule,
-  initialTime, // Destructure new prop
+  initialTime,
+  initialDate,
 }: ITodayScheduleModalProps) {
   const queryClient = useQueryClient();
   const isEditMode = !!schedule;
@@ -50,10 +71,33 @@ export default function TodayScheduleModal({
   const [actionType, setActionType] = useState<ActionType>("TTS");
   const [ttsText, setTtsText] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [duration, setDuration] = useState(60);
-  const [executionTime, setExecutionTime] = useState(initialTime || getCurrentTime()); // Use initialTime
+  const [youtubeVideoTitle, setYoutubeVideoTitle] = useState("");
+  const [playbackRange, setPlaybackRange] = useState<[number, number]>([0, 60]);
+  const [totalDuration, setTotalDuration] = useState<number | null>(null);
+  const [executionTime, setExecutionTime] = useState(
+    initialTime || getCurrentTime(),
+  );
   const [ttl, setTtl] = useState(3600);
   const [volume, setVolume] = useState(50);
+
+  const startTime = playbackRange[0];
+  const duration = playbackRange[1] - playbackRange[0];
+
+  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } =
+    useMutation({
+      mutationFn: getYoutubeVideoInfo,
+      onSuccess: (data) => {
+        setTotalDuration(data.durationInSeconds);
+        setPlaybackRange([0, data.durationInSeconds]);
+        setYoutubeVideoTitle(data.title);
+      },
+      onError: (error) => {
+        console.error("Failed to fetch video info", error);
+        setTotalDuration(null);
+        setYoutubeVideoTitle("");
+        alert("유튜브 영상 정보를 가져오는데 실패했습니다.");
+      },
+    });
 
   useEffect(() => {
     if (isEditMode && schedule) {
@@ -63,21 +107,29 @@ export default function TodayScheduleModal({
       setActionType(ac?.type || "TTS");
       setTtsText(ac?.text || "");
       setYoutubeUrl(ac?.url || "");
-      setDuration(ac?.duration || 60);
       if (ac?.volume) {
         setVolume(ac.volume);
       }
+      if (ac?.startTime !== undefined && ac?.duration !== undefined) {
+        setPlaybackRange([ac.startTime, ac.startTime + ac.duration]);
+      }
+
       const sc = schedule.schedule_config;
       if (sc?.datetime) {
-        setExecutionTime(sc.datetime.split('T')[1].substring(0, 5));
+        setExecutionTime(sc.datetime.split("T")[1].substring(0, 5));
       }
       if (sc?.ttl) {
         setTtl(sc.ttl);
       }
-    } else if (initialTime) { // Update executionTime if initialTime changes in non-edit mode
+
+      if (ac?.type === "YOUTUBE" && ac?.url) {
+        const videoId = extractVideoId(ac.url);
+        if (videoId) fetchVideoInfo(videoId);
+      }
+    } else if (initialTime) {
       setExecutionTime(initialTime);
     }
-  }, [isEditMode, schedule, initialTime]);
+  }, [isEditMode, schedule, initialTime, fetchVideoInfo]);
 
   const { data: devices, isLoading: isLoadingDevices } = useQuery<any>({
     queryKey: ["devices"],
@@ -90,10 +142,21 @@ export default function TodayScheduleModal({
     }
   }, [devices, isEditMode, selectedDevice]);
 
+  const handleYoutubeUrlChange = (url: string) => {
+    setYoutubeUrl(url);
+    const videoId = extractVideoId(url);
+    if (videoId) {
+      fetchVideoInfo(videoId);
+    } else {
+      setTotalDuration(null);
+      setYoutubeVideoTitle("");
+    }
+  };
+
   const { mutate: createMutate } = useMutation({
     mutationFn: createSchedule,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todaySchedules'] });
+      queryClient.invalidateQueries({ queryKey: ["schedulesByDate"] });
     },
   });
 
@@ -101,14 +164,14 @@ export default function TodayScheduleModal({
     mutationFn: (updatedSchedule: any) =>
       updateSchedule(schedule.id, updatedSchedule),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todaySchedules'] });
+      queryClient.invalidateQueries({ queryKey: ["schedulesByDate"] });
     },
   });
 
   const { mutate: deleteMutate } = useMutation({
     mutationFn: () => deleteSchedule(schedule.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todaySchedules'] });
+      queryClient.invalidateQueries({ queryKey: ["schedulesByDate"] });
     },
   });
 
@@ -126,20 +189,20 @@ export default function TodayScheduleModal({
     }
     let finalTitle = title.trim();
     if (finalTitle === "") {
-      finalTitle =
-        actionType === "TTS"
-          ? ttsText
-            ? `TTS: ${ttsText.substring(0, 20)}...`
-            : "새로운 TTS 알림"
-          : "YouTube 재생";
+      if (actionType === "TTS") {
+        finalTitle = ttsText
+          ? `TTS: ${ttsText.substring(0, 20)}...`
+          : "새로운 TTS 알림";
+      } else {
+        finalTitle = youtubeVideoTitle || "YouTube 재생";
+      }
     }
 
-    const today = new Date().toISOString().split('T')[0];
     const schedulePayload = {
       title: finalTitle,
       schedule_config: {
         type: "ONE_TIME",
-        datetime: `${today}T${executionTime}:00`,
+        datetime: `${initialDate}T${executionTime}:00`,
         ttl: ttl,
       },
       action_config: {
@@ -147,7 +210,8 @@ export default function TodayScheduleModal({
         type: actionType,
         text: ttsText,
         url: youtubeUrl,
-        duration: duration,
+        startTime: Math.round(startTime),
+        duration: Math.round(duration),
         volume: volume,
       },
       active: schedule?.active ?? true,

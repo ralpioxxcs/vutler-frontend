@@ -28,16 +28,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="fixed top-0 left-0 w-full bg-zinc-800 text-white h-10 flex items-center shadow-md z-50 justify-between">
-        <h1 className="px-4 text-left text-xl font-bold">Vutler</h1>
-        <Button
-          variant="light"
-          isIconOnly
-          onPress={toggleNav}
-          className="text-white text-2xl px-4 focus:outline-none"
-        >
-          <MenuIcon />
-        </Button>
+      <div className="fixed top-0 w-full bg-slate-700 text-white h-10 flex items-center shadow-md z-50">
+        <div className="flex-1">
+          <h1 className="px-4 text-left text-xl font-bold">V U T L E R</h1>
+        </div>
+        <div className="w-14 flex justify-center items-center">
+          <Button
+            variant="light"
+            isIconOnly
+            onPress={toggleNav}
+            className="text-white text-2xl focus:outline-none"
+          >
+            <MenuIcon />
+          </Button>
+        </div>
       </div>
       <div className="flex-1 flex relative mt-10">
         <Sidebar

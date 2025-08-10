@@ -9,7 +9,6 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
-  PressEvent,
   Select,
   SelectItem,
   Spinner,
@@ -50,7 +49,7 @@ const formatSeconds = (seconds: number) => {
 
 const extractVideoId = (url: string): string | null => {
   const regex =
-    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; // Corrected regex escaping
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
   const matches = url.match(regex);
   return matches ? matches[1] : null;
 };
@@ -76,6 +75,7 @@ export default function ScheduleFormModal({
   const [actionType, setActionType] = useState<ActionType>("TTS");
   const [ttsText, setTtsText] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeVideoTitle, setYoutubeVideoTitle] = useState("");
   const [playbackRange, setPlaybackRange] = useState<[number, number]>([0, 60]);
   const [totalDuration, setTotalDuration] = useState<number | null>(null);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("ONE_TIME");
@@ -93,16 +93,18 @@ export default function ScheduleFormModal({
     queryFn: getDevice,
   });
 
-  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } =
+  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } = 
     useMutation({
       mutationFn: getYoutubeVideoInfo,
       onSuccess: (data) => {
         setTotalDuration(data.durationInSeconds);
         setPlaybackRange([0, data.durationInSeconds]);
+        setYoutubeVideoTitle(data.title);
       },
       onError: (error) => {
         console.error("Failed to fetch video info", error);
         setTotalDuration(null);
+        setYoutubeVideoTitle("");
         alert("유튜브 영상 정보를 가져오는데 실패했습니다.");
       },
     });
@@ -146,6 +148,7 @@ export default function ScheduleFormModal({
       fetchVideoInfo(videoId);
     } else {
       setTotalDuration(null);
+      setYoutubeVideoTitle("");
     }
   };
 
@@ -188,12 +191,13 @@ export default function ScheduleFormModal({
 
     let finalTitle = title.trim();
     if (finalTitle === "") {
-      finalTitle =
-        actionType === "TTS"
-          ? ttsText
-            ? `TTS: ${ttsText.substring(0, 20)}...`
-            : "새로운 TTS 알림"
-          : "YouTube 재생";
+      if (actionType === "TTS") {
+        finalTitle = ttsText
+          ? `TTS: ${ttsText.substring(0, 20)}...`
+          : "새로운 TTS 알림";
+      } else {
+        finalTitle = youtubeVideoTitle || "YouTube 재생";
+      }
     }
 
     const schedulePayload = {
@@ -299,7 +303,8 @@ export default function ScheduleFormModal({
                       <div className="flex justify-between items-center mb-2">
                         <span>재생 구간 선택</span>
                         <span className="font-semibold">
-                          총 {formatSeconds(totalDuration)}
+                          {formatSeconds(duration)} / 총{" "}
+                          {formatSeconds(totalDuration)}
                         </span>
                       </div>
                       <div className="px-2">

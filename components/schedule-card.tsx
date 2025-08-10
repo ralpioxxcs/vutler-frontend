@@ -52,6 +52,37 @@ const ActionBadge = ({ config }: { config: any }) => {
   }
 };
 
+const ScheduleTypeBadge = ({ config }: { config: any }) => {
+  if (!config) {
+    return null;
+  }
+
+  const baseBadgeStyle =
+    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold';
+
+  switch (config.type) {
+    case 'ONE_TIME':
+      return (
+        <span className={`${baseBadgeStyle} bg-purple-100 text-purple-700`}>
+          이벤트
+        </span>
+      );
+    case 'RECURRING':
+    case 'HOURLY':
+      return (
+        <span className={`${baseBadgeStyle} bg-green-100 text-green-700`}>
+          루틴
+        </span>
+      );
+    default:
+      return (
+        <span className={`${baseBadgeStyle} bg-gray-100 text-gray-700`}>
+          알 수 없음
+        </span>
+      );
+  }
+};
+
 const formatScheduleTime = (config: any) => {
   if (!config) return '시간 정보 없음';
   try {
@@ -187,6 +218,7 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
             {schedule.title}
           </h2>
           <div className="flex items-center gap-4 mt-2">
+            <ScheduleTypeBadge config={schedule.schedule_config} />
             <ActionBadge config={schedule.action_config} />
             <div className="flex items-center text-xs text-gray-500">
               <ClockIcon className="w-4 h-4 mr-1" />

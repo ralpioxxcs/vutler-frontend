@@ -3,9 +3,12 @@ import "./globals.css";
 import { ClientProvider } from "@/components/ClientProvider";
 
 export const metadata: Metadata = {
-  title: "Vutler",
+  title: "VUTLER",
   description: "Your personal home assistant",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export const viewport: Viewport = {

@@ -11,11 +11,21 @@ interface ITodayTimelineProps {
 }
 
 const TodayTimeline = ({ schedules, isLoading, onTimeClick }: ITodayTimelineProps) => {
+  const now = new Date();
+  const currentHour = now.getHours();
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>;
   }
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  const formatHour = (hour: number) => {
+    if (hour === 0) return '12 AM';
+    if (hour === 12) return '12 PM';
+    if (hour < 12) return `${hour} AM`;
+    return `${hour - 12} PM`;
+  };
 
   const getSchedulesForHour = (hour: number) => {
     return schedules
@@ -30,15 +40,16 @@ const TodayTimeline = ({ schedules, isLoading, onTimeClick }: ITodayTimelineProp
     <div className="space-y-4">
       {hours.map(hour => {
         const schedulesForHour = getSchedulesForHour(hour);
+        const isCurrentHour = hour === currentHour;
         return (
           <div key={hour} className="flex gap-4 items-start">
             <div 
-              className="w-16 text-right text-sm text-gray-500 cursor-pointer hover:text-blue-600 transition-colors"
+              className={`w-16 text-right text-sm cursor-pointer hover:text-blue-600 transition-colors ${isCurrentHour ? 'font-bold text-blue-500' : 'text-gray-500'}`}
               onClick={() => onTimeClick(hour)}
             >
-              {hour}:00
+              {formatHour(hour)}
             </div>
-            <div className="flex-1 border-t border-gray-200 pt-2">
+            <div className={`flex-1 border-t pt-2 ${isCurrentHour ? 'border-blue-300' : 'border-gray-200'}`}>
               {schedulesForHour.length > 0 ? (
                 schedulesForHour.map(schedule => (
                   <TodayScheduleCard key={schedule.id} queryId="todaySchedules" schedule={schedule} />

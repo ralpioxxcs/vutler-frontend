@@ -41,16 +41,13 @@ async function getRoutineList(): Promise<Schedule[]> {
   }
 }
 
-export async function getSchedulesForToday() {
+export async function getSchedulesByDate(dateString: string) {
   try {
-    const today = new Date();
-    const dateString = formatDate(today);
-    const dayOfWeek = today.getDay();
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay();
 
     const params = new URLSearchParams({ date: dateString });
     const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
-
-    console.log(`🚀 요청 URL: ${url}`);
 
     const response = await fetch(url);
 

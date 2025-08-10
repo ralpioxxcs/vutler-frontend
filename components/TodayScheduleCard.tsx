@@ -41,7 +41,41 @@ const ActionBadge = ({ config }: { config: any }) => {
   }
 };
 
-export default function TodayScheduleCard({ queryId, schedule }: TodayScheduleCardProps) {
+const ScheduleTypeBadge = ({ config }: { config: any }) => {
+  if (!config) {
+    return null;
+  }
+
+  const baseBadgeStyle =
+    "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold";
+
+  switch (config.type) {
+    case "ONE_TIME":
+      return (
+        <span className={`${baseBadgeStyle} bg-purple-100 text-purple-700`}>
+          이벤트
+        </span>
+      );
+    case "RECURRING":
+    case "HOURLY":
+      return (
+        <span className={`${baseBadgeStyle} bg-green-100 text-green-700`}>
+          루틴
+        </span>
+      );
+    default:
+      return (
+        <span className={`${baseBadgeStyle} bg-gray-100 text-gray-700`}>
+          알 수 없음
+        </span>
+      );
+  }
+};
+
+export default function TodayScheduleCard({
+  queryId,
+  schedule,
+}: TodayScheduleCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
@@ -53,10 +87,11 @@ export default function TodayScheduleCard({ queryId, schedule }: TodayScheduleCa
         className={`flex items-center p-2 my-1 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`} // Smaller padding and margin
       >
         <div className="flex flex-col flex-grow min-w-0">
-          <h2 className="text-sm font-semibold text-gray-800 truncate"> {/* Smaller font */}
+          <h2 className="text-sm font-semibold text-gray-800 truncate">
             {schedule.title}
           </h2>
-          <div className="flex items-center mt-1"> {/* Reduced margin-top */}
+          <div className="flex items-center gap-2 mt-1">
+            <ScheduleTypeBadge config={schedule.schedule_config} />
             <ActionBadge config={schedule.action_config} />
           </div>
         </div>
