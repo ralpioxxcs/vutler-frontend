@@ -15,16 +15,19 @@ import {
   Spinner,
 } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
 } from "@/pages/api/schedule";
 import { getDevice } from "@/pages/api/device";
+import { getYoutubeVideoInfo } from "@/pages/api/youtube";
 import type { Device } from "Type";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-// Helper functions to get current time in required formats
+// Helper functions
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -36,6 +39,20 @@ const getCurrentTime = () => {
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
+};
+
+const formatSeconds = (seconds: number) => {
+  if (isNaN(seconds) || seconds < 0) return "0분 0초";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}분 ${secs}초`;
+};
+
+const extractVideoId = (url: string): string | null => {
+  const regex =
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/; // Corrected regex escaping
+  const matches = url.match(regex);
+  return matches ? matches[1] : null;
 };
 
 interface IScheduleFormModalProps {
@@ -53,17 +70,42 @@ export default function ScheduleFormModal({
   const queryClient = useQueryClient();
   const isEditMode = !!schedule;
 
-  // Form state with current time as default for new schedules
+  // Form state
   const [title, setTitle] = useState("");
   const [selectedDevice, setSelectedDevice] = useState<string>("");
   const [actionType, setActionType] = useState<ActionType>("TTS");
   const [ttsText, setTtsText] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [duration, setDuration] = useState(60);
+  const [playbackRange, setPlaybackRange] = useState<[number, number]>([0, 60]);
+  const [totalDuration, setTotalDuration] = useState<number | null>(null);
   const [scheduleType, setScheduleType] = useState<ScheduleType>("ONE_TIME");
   const [oneTimeDate, setOneTimeDate] = useState(getCurrentDateTimeLocal());
   const [recurringDays, setRecurringDays] = useState<string[]>([]);
   const [executionTime, setExecutionTime] = useState(getCurrentTime());
+  const [volume, setVolume] = useState(50);
+
+  const startTime = playbackRange[0];
+  const duration = playbackRange[1] - playbackRange[0];
+
+  // Mutations and Queries
+  const { data: devices, isLoading: isLoadingDevices } = useQuery<any>({
+    queryKey: ["devices"],
+    queryFn: getDevice,
+  });
+
+  const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } =
+    useMutation({
+      mutationFn: getYoutubeVideoInfo,
+      onSuccess: (data) => {
+        setTotalDuration(data.durationInSeconds);
+        setPlaybackRange([0, data.durationInSeconds]);
+      },
+      onError: (error) => {
+        console.error("Failed to fetch video info", error);
+        setTotalDuration(null);
+        alert("유튜브 영상 정보를 가져오는데 실패했습니다.");
+      },
+    });
 
   useEffect(() => {
     if (isEditMode && schedule) {
@@ -73,19 +115,23 @@ export default function ScheduleFormModal({
       setActionType(ac?.type || "TTS");
       setTtsText(ac?.text || "");
       setYoutubeUrl(ac?.url || "");
-      setDuration(ac?.duration || 60);
+      setVolume(ac?.volume || 50);
+      if (ac?.startTime !== undefined && ac?.duration !== undefined) {
+        setPlaybackRange([ac.startTime, ac.startTime + ac.duration]);
+      }
+
       const sc = schedule.schedule_config;
       setScheduleType(sc?.type || "ONE_TIME");
       setOneTimeDate(sc?.datetime || getCurrentDateTimeLocal());
       setRecurringDays(sc?.days || []);
       setExecutionTime(sc?.time || getCurrentTime());
-    }
-  }, [isEditMode, schedule]);
 
-  const { data: devices, isLoading: isLoadingDevices } = useQuery<any>({
-    queryKey: ["devices"],
-    queryFn: getDevice,
-  });
+      if (ac?.type === "YOUTUBE" && ac?.url) {
+        const videoId = extractVideoId(ac.url);
+        if (videoId) fetchVideoInfo(videoId);
+      }
+    }
+  }, [isEditMode, schedule, fetchVideoInfo]);
 
   useEffect(() => {
     if (!isEditMode && devices?.data?.length > 0 && !selectedDevice) {
@@ -93,61 +139,25 @@ export default function ScheduleFormModal({
     }
   }, [devices, isEditMode, selectedDevice]);
 
-  // Mutations with optimistic updates
+  const handleYoutubeUrlChange = (url: string) => {
+    setYoutubeUrl(url);
+    const videoId = extractVideoId(url);
+    if (videoId) {
+      fetchVideoInfo(videoId);
+    } else {
+      setTotalDuration(null);
+    }
+  };
+
   const { mutate: createMutate } = useMutation({
     mutationFn: createSchedule,
-    onMutate: async (newSchedule) => {
-      const queryKey = ["main"];
-      await queryClient.cancelQueries({ queryKey });
-      const previousData = queryClient.getQueryData(queryKey);
-      queryClient.setQueryData(queryKey, (oldData: any[] | undefined) => {
-        const optimisticNewSchedule = {
-          ...newSchedule,
-          id: `temp-${Date.now()}`,
-        };
-        return oldData
-          ? [optimisticNewSchedule, ...oldData]
-          : [optimisticNewSchedule];
-      });
-      return { previousData };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousData)
-        queryClient.setQueryData(["main"], context.previousData);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["main"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["main"] }),
   });
 
   const { mutate: updateMutate } = useMutation({
     mutationFn: (updatedSchedule: any) =>
       updateSchedule(schedule.id, updatedSchedule),
-    onMutate: async (updatedSchedule) => {
-      const queryKeys = [["main"], ["routine"], ["event"]];
-      await Promise.all(
-        queryKeys.map((key) => queryClient.cancelQueries({ queryKey: key })),
-      );
-      const previousData = new Map(
-        queryKeys.map((key) => [key.toString(), queryClient.getQueryData(key)]),
-      );
-      queryKeys.forEach((key) => {
-        const oldData: any[] | undefined = queryClient.getQueryData(key);
-        if (oldData) {
-          const newData = oldData.map((item) =>
-            item.id === schedule.id ? { ...item, ...updatedSchedule } : item,
-          );
-          queryClient.setQueryData(key, newData);
-        }
-      });
-      return { previousData };
-    },
-    onError: (err, variables, context) => {
-      context?.previousData.forEach((data, key) =>
-        queryClient.setQueryData(key.split(","), data),
-      );
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["main"] });
       queryClient.invalidateQueries({ queryKey: ["routine"] });
       queryClient.invalidateQueries({ queryKey: ["event"] });
@@ -156,30 +166,7 @@ export default function ScheduleFormModal({
 
   const { mutate: deleteMutate } = useMutation({
     mutationFn: () => deleteSchedule(schedule.id),
-    onMutate: async () => {
-      const queryKeys = [["main"], ["routine"], ["event"]];
-      await Promise.all(
-        queryKeys.map((key) => queryClient.cancelQueries({ queryKey: key })),
-      );
-      const previousData = new Map(
-        queryKeys.map((key) => [key.toString(), queryClient.getQueryData(key)]),
-      );
-      queryKeys.forEach((key) => {
-        const oldData: any[] | undefined = queryClient.getQueryData(key);
-        if (oldData)
-          queryClient.setQueryData(
-            key,
-            oldData.filter((item) => item.id !== schedule.id),
-          );
-      });
-      return { previousData };
-    },
-    onError: (err, variables, context) => {
-      context?.previousData.forEach((data, key) =>
-        queryClient.setQueryData(key.split(","), data),
-      );
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["main"] });
       queryClient.invalidateQueries({ queryKey: ["routine"] });
       queryClient.invalidateQueries({ queryKey: ["event"] });
@@ -198,6 +185,7 @@ export default function ScheduleFormModal({
       alert("장치를 선택해주세요.");
       return;
     }
+
     let finalTitle = title.trim();
     if (finalTitle === "") {
       finalTitle =
@@ -207,6 +195,7 @@ export default function ScheduleFormModal({
             : "새로운 TTS 알림"
           : "YouTube 재생";
     }
+
     const schedulePayload = {
       title: finalTitle,
       schedule_config: {
@@ -220,14 +209,12 @@ export default function ScheduleFormModal({
         type: actionType,
         text: ttsText,
         url: youtubeUrl,
-        duration: duration,
+        startTime: Math.round(startTime),
+        duration: Math.round(duration),
+        volume: volume,
       },
       active: schedule?.active ?? true,
     };
-    if (scheduleType === "HOURLY") {
-      schedulePayload.action_config.text = `${executionTime.split(":")[0]}시 정각입니다.`;
-      schedulePayload.title = `${executionTime.split(":")[0]}시 정각 알림`;
-    }
 
     if (isEditMode) {
       updateMutate(schedulePayload);
@@ -252,7 +239,6 @@ export default function ScheduleFormModal({
               placeholder="예: 퇴근 시간 알림"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="text-base"
             />
 
             <div>
@@ -266,7 +252,6 @@ export default function ScheduleFormModal({
                   label="장치 선택"
                   selectedKeys={[selectedDevice]}
                   onChange={(e) => setSelectedDevice(e.target.value)}
-                  className="text-base"
                 >
                   {devices?.data.map((device: Device) => (
                     <SelectItem key={device.deviceId} value={device.deviceId}>
@@ -285,7 +270,6 @@ export default function ScheduleFormModal({
                 label="액션 선택"
                 selectedKeys={[actionType]}
                 onChange={(e) => setActionType(e.target.value as ActionType)}
-                className="text-base"
               >
                 <SelectItem key="TTS" value="TTS">
                   텍스트 읽어주기
@@ -299,26 +283,62 @@ export default function ScheduleFormModal({
                   label="읽어줄 텍스트"
                   value={ttsText}
                   onChange={(e) => setTtsText(e.target.value)}
-                  className="mt-2 text-base"
+                  className="mt-2"
                 />
               )}
               {actionType === "YOUTUBE" && (
-                <>
+                <div className="mt-2 space-y-2">
                   <Input
                     label="유튜브 URL"
                     value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    className="mt-2 text-base"
+                    onChange={(e) => handleYoutubeUrlChange(e.target.value)}
                   />
-                  <Input
-                    type="number"
-                    label="재생 시간 (초)"
-                    value={String(duration)}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="mt-2 text-base"
-                  />
-                </>
+                  {isFetchingVideoInfo && <Spinner size="sm" />}
+                  {totalDuration !== null && (
+                    <div className="p-3 bg-gray-100 rounded-md text-sm text-gray-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <span>재생 구간 선택</span>
+                        <span className="font-semibold">
+                          총 {formatSeconds(totalDuration)}
+                        </span>
+                      </div>
+                      <div className="px-2">
+                        <Slider
+                          range
+                          min={0}
+                          max={totalDuration}
+                          value={playbackRange}
+                          onChange={(value) =>
+                            setPlaybackRange(value as [number, number])
+                          }
+                          step={1}
+                          allowCross={false}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs mt-1">
+                        <span>{formatSeconds(playbackRange[0])}</span>
+                        <span>{formatSeconds(playbackRange[1])}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-gray-600">
+                소리 크기
+              </h3>
+              <div className="flex items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-full"
+                />
+                <span className="ml-4 w-12 text-center">{volume}%</span>
+              </div>
             </div>
 
             <div>
@@ -331,7 +351,6 @@ export default function ScheduleFormModal({
                 onChange={(e) =>
                   setScheduleType(e.target.value as ScheduleType)
                 }
-                className="text-base"
               >
                 <SelectItem key="ONE_TIME" value="ONE_TIME">
                   한 번만 실행
@@ -349,7 +368,7 @@ export default function ScheduleFormModal({
                   label="실행 날짜 및 시간"
                   value={oneTimeDate}
                   onChange={(e) => setOneTimeDate(e.target.value)}
-                  className="mt-2 text-base"
+                  className="mt-2"
                 />
               )}
               {scheduleType === "RECURRING" && (
@@ -359,7 +378,6 @@ export default function ScheduleFormModal({
                     label="실행 시간"
                     value={executionTime}
                     onChange={(e) => setExecutionTime(e.target.value)}
-                    className="text-base"
                   />
                   <div className="flex flex-wrap gap-2">
                     {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
@@ -383,17 +401,6 @@ export default function ScheduleFormModal({
                   </div>
                 </div>
               )}
-              {scheduleType === "HOURLY" && (
-                <Input
-                  type="number"
-                  label="실행 시간 (0-23)"
-                  value={executionTime.split(":")[0]}
-                  onChange={(e) => setExecutionTime(`${e.target.value}:00`)}
-                  className="mt-2 text-base"
-                  min="0"
-                  max="23"
-                />
-              )}
             </div>
           </div>
         </ModalBody>
@@ -408,12 +415,7 @@ export default function ScheduleFormModal({
               <TrashIcon className="w-5 h-5" />
             </Button>
           )}
-          <Button
-            variant="light"
-            onPress={(e: PressEvent) => {
-              onClose();
-            }}
-          >
+          <Button variant="light" onPress={onClose}>
             취소
           </Button>
           <Button color="primary" onPress={handleSave}>

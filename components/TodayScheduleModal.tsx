@@ -52,6 +52,8 @@ export default function TodayScheduleModal({
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [duration, setDuration] = useState(60);
   const [executionTime, setExecutionTime] = useState(initialTime || getCurrentTime()); // Use initialTime
+  const [ttl, setTtl] = useState(3600);
+  const [volume, setVolume] = useState(50);
 
   useEffect(() => {
     if (isEditMode && schedule) {
@@ -62,9 +64,15 @@ export default function TodayScheduleModal({
       setTtsText(ac?.text || "");
       setYoutubeUrl(ac?.url || "");
       setDuration(ac?.duration || 60);
+      if (ac?.volume) {
+        setVolume(ac.volume);
+      }
       const sc = schedule.schedule_config;
       if (sc?.datetime) {
         setExecutionTime(sc.datetime.split('T')[1].substring(0, 5));
+      }
+      if (sc?.ttl) {
+        setTtl(sc.ttl);
       }
     } else if (initialTime) { // Update executionTime if initialTime changes in non-edit mode
       setExecutionTime(initialTime);
@@ -132,6 +140,7 @@ export default function TodayScheduleModal({
       schedule_config: {
         type: "ONE_TIME",
         datetime: `${today}T${executionTime}:00`,
+        ttl: ttl,
       },
       action_config: {
         deviceId: selectedDevice,
@@ -139,6 +148,7 @@ export default function TodayScheduleModal({
         text: ttsText,
         url: youtubeUrl,
         duration: duration,
+        volume: volume,
       },
       active: schedule?.active ?? true,
     };
@@ -174,6 +184,14 @@ export default function TodayScheduleModal({
               placeholder="예: 점심 약속 알림"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="text-base"
+            />
+
+            <Input
+              type="number"
+              label="완료 후 자동 삭제 (초)"
+              value={String(ttl)}
+              onChange={(e) => setTtl(Number(e.target.value))}
               className="text-base"
             />
 
@@ -236,6 +254,22 @@ export default function TodayScheduleModal({
                   />
                 </div>
               )}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium mb-2 text-gray-600">
+                소리 크기
+              </h3>
+              <div className="flex items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-full"
+                />
+                <span className="ml-4 w-12 text-center">{volume}%</span>
+              </div>
             </div>
           </div>
         </ModalBody>

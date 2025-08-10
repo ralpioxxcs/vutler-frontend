@@ -1,4 +1,4 @@
-import type { ScheduleList } from "Type";
+import type { Schedule } from "Type";
 
 const baseURL = process.env.NEXT_PUBLIC_SCHEDULE_SERVER;
 
@@ -10,7 +10,7 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export async function getScheduleList(): Promise<ScheduleList[]> {
+export async function getScheduleList(): Promise<Schedule[]> {
   const url = `${baseURL}/v1.0/scheduler/schedule`;
 
   try {
@@ -25,10 +25,27 @@ export async function getScheduleList(): Promise<ScheduleList[]> {
   }
 }
 
+async function getRoutineList(): Promise<Schedule[]> {
+  const params = new URLSearchParams({ scheduleTypes: "routine" });
+  const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (err) {
+    console.error(`Error fetching routine list: ${err}`);
+    throw err;
+  }
+}
+
 export async function getSchedulesForToday() {
   try {
     const today = new Date();
     const dateString = formatDate(today);
+    const dayOfWeek = today.getDay();
 
     const params = new URLSearchParams({ date: dateString });
     const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
@@ -42,8 +59,17 @@ export async function getSchedulesForToday() {
         `server error: ${response.status} ${response.statusText}`,
       );
     }
-    const data = await response.json();
-    return data;
+    const oneTimeSchedules = await response.json();
+    const routines = await getRoutineList();
+
+    const todayRoutines = routines.filter((routine) => {
+      if (routine.schedule_config && routine.schedule_config.daysOfWeek) {
+        return routine.schedule_config.daysOfWeek.includes(dayOfWeek);
+      }
+      return false;
+    });
+
+    return [...oneTimeSchedules, ...todayRoutines];
   } catch (err) {
     console.error(`Error fetching schedule list: ${err}`);
     throw err;
@@ -110,3 +136,4 @@ export async function updateSchedule(id: string, patchData: any) {
     throw err;
   }
 }
+

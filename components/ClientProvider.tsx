@@ -39,7 +39,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <MenuIcon />
         </Button>
       </div>
-      <div className="flex-1 flex relative">
+      <div className="flex-1 flex relative mt-10">
         <Sidebar
           isNavVisible={isNavVisible}
           toggleNav={toggleNav}

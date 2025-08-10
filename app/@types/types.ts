@@ -11,6 +11,11 @@ declare module "Type" {
     startDate: string;
     endDate: string;
     tasks: Task[];
+    schedule_config?: {
+      daysOfWeek?: number[];
+      time?: string;
+      datetime?: string;
+    };
     updatedAt: string;
     createdAt: string;
   };

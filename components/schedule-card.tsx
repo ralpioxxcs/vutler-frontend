@@ -1,11 +1,19 @@
-"use client";
+'use client';
 
-import { updateSchedule, deleteSchedule } from "@/pages/api/schedule";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { ClockIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Mic, YouTube } from "@mui/icons-material";
-import ScheduleFormModal from "./ScheduleFormModal";
+import {
+  updateSchedule,
+  deleteSchedule,
+  createSchedule,
+} from '@/pages/api/schedule';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import {
+  ClockIcon,
+  TrashIcon,
+  DocumentDuplicateIcon,
+} from '@heroicons/react/24/outline';
+import { Mic, YouTube } from '@mui/icons-material';
+import ScheduleFormModal from './ScheduleFormModal';
 
 interface ScheduleProps {
   queryId: string;
@@ -18,17 +26,17 @@ const ActionBadge = ({ config }: { config: any }) => {
   }
 
   const baseBadgeStyle =
-    "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold";
+    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold';
 
   switch (config.type) {
-    case "TTS":
+    case 'TTS':
       return (
         <span className={`${baseBadgeStyle} bg-blue-100 text-blue-700`}>
           <Mic sx={{ fontSize: 16 }} />
           TTS
         </span>
       );
-    case "YOUTUBE":
+    case 'YOUTUBE':
       return (
         <span className={`${baseBadgeStyle} bg-red-100 text-red-700`}>
           <YouTube sx={{ fontSize: 16 }} />
@@ -45,28 +53,44 @@ const ActionBadge = ({ config }: { config: any }) => {
 };
 
 const formatScheduleTime = (config: any) => {
-  if (!config) return "시간 정보 없음";
+  if (!config) return '시간 정보 없음';
   try {
     switch (config.type) {
-      case "ONE_TIME":
+      case 'ONE_TIME':
         const date = new Date(config.datetime);
-        return date.toLocaleString("ko-KR", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
+        return date.toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
         });
-      case "RECURRING":
-        return `매주 ${config.days.join(", ")} ${config.time.substring(0, 5)}`;
-      case "HOURLY":
-        return `매시간 ${config.time.split(":")[1]}분`;
+      case 'RECURRING':
+        return `매주 ${config.days.join(', ')} ${config.time.substring(0, 5)}`;
+      case 'HOURLY':
+        return `매시간 ${config.time.split(':')[1]}분`;
       default:
-        return "알 수 없는 스케줄";
+        return '알 수 없는 스케줄';
     }
   } catch (error) {
-    return "시간 형식 오류";
+    return '시간 형식 오류';
   }
+};
+
+const formatTtl = (ttlInSeconds: number): string => {
+  if (ttlInSeconds < 60) {
+    return `${ttlInSeconds}초 후 삭제`;
+  }
+  const minutes = Math.floor(ttlInSeconds / 60);
+  if (minutes < 60) {
+    return `${minutes}분 후 삭제`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}시간 후 삭제`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}일 후 삭제`;
 };
 
 export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
@@ -81,6 +105,21 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
   const displayTime = formatScheduleTime(schedule.schedule_config);
 
   const queryClient = useQueryClient();
+
+  const { mutate: handleDuplicate } = useMutation({
+    mutationFn: () => {
+      const { id, ...newSchedule } = schedule;
+      return createSchedule(newSchedule);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['main'] });
+      queryClient.invalidateQueries({ queryKey: ['routine'] });
+      queryClient.invalidateQueries({ queryKey: ['event'] });
+    },
+    onError: (error) => {
+      alert(`복제 중 오류가 발생했습니다: ${error.message}`);
+    },
+  });
 
   const { mutate: handleActiveToggle } = useMutation({
     mutationFn: () => updateSchedule(schedule.id, { active: !schedule.active }),
@@ -117,9 +156,9 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
   const { mutate: handleDelete } = useMutation({
     mutationFn: () => deleteSchedule(schedule.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["main"] });
-      queryClient.invalidateQueries({ queryKey: ["routine"] });
-      queryClient.invalidateQueries({ queryKey: ["event"] });
+      queryClient.invalidateQueries({ queryKey: ['main'] });
+      queryClient.invalidateQueries({ queryKey: ['routine'] });
+      queryClient.invalidateQueries({ queryKey: ['event'] });
     },
     onError: (error) => {
       alert(`삭제 중 오류가 발생했습니다: ${error.message}`);
@@ -130,16 +169,17 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
     <>
       <div
         onClick={openModal}
-        className={`flex items-center p-4 my-2 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
+        className={`flex items-center p-4 my-2 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md hover:border-gray-300 ${!schedule.active && 'opacity-50'}`}
       >
         <div
           onClick={(e) => {
+            e.stopPropagation();
             handleActiveToggle();
           }}
           className={`w-5 h-5 rounded-full mr-4 flex-shrink-0 transition-colors ${
             schedule.active
-              ? "bg-green-500 hover:bg-green-600"
-              : "bg-gray-300 hover:bg-gray-400"
+              ? 'bg-green-500 hover:bg-green-600'
+              : 'bg-gray-300 hover:bg-gray-400'
           }`}
         ></div>
         <div className="flex flex-col flex-grow min-w-0">
@@ -151,17 +191,32 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
             <div className="flex items-center text-xs text-gray-500">
               <ClockIcon className="w-4 h-4 mr-1" />
               <span>{displayTime}</span>
+              {schedule.schedule_config.type === 'ONE_TIME' &&
+                schedule.schedule_config.ttl && (
+                  <span className="ml-2 text-blue-500">
+                    ({formatTtl(schedule.schedule_config.ttl)})
+                  </span>
+                )}
             </div>
           </div>
         </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (window.confirm("정말로 이 스케줄을 삭제하시겠습니까?")) {
+            handleDuplicate();
+          }}
+          className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <DocumentDuplicateIcon className="w-5 h-5 text-gray-500" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
               handleDelete();
             }
           }}
-          className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="ml-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
         >
           <TrashIcon className="w-5 h-5 text-gray-500" />
         </button>
