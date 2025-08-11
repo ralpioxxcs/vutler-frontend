@@ -29,8 +29,12 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 // Helper functions
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const getCurrentTime = () => {
@@ -124,7 +128,11 @@ export default function ScheduleFormModal({
 
       const sc = schedule.schedule_config;
       setScheduleType(sc?.type || "ONE_TIME");
-      setOneTimeDate(sc?.datetime || getCurrentDateTimeLocal());
+      if (sc?.datetime) {
+        setOneTimeDate(sc.datetime.slice(0, 16));
+      } else {
+        setOneTimeDate(getCurrentDateTimeLocal());
+      }
       setRecurringDays(sc?.days || []);
       setExecutionTime(sc?.time || getCurrentTime());
 
@@ -216,7 +224,7 @@ export default function ScheduleFormModal({
       title: finalTitle,
       schedule_config: {
         type: scheduleType,
-        datetime: oneTimeDate,
+        datetime: scheduleType === 'ONE_TIME' ? `${oneTimeDate}:00` : undefined,
         days: recurringDays,
         time: executionTime,
       },

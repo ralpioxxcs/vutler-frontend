@@ -97,6 +97,33 @@ export async function createSchedule(scheduleData: object) {
   }
 }
 
+export const copySchedulesByDate = async ({
+  sourceDate,
+  destinationDate,
+}: {
+  sourceDate: string;
+  destinationDate: string;
+}) => {
+  const url = `${baseURL}/v1.0/scheduler/schedule/copy-by-date`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sourceDate, destinationDate }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to copy schedules");
+    }
+    return await response.json();
+  } catch (err) {
+    console.error(`Error copying schedules: ${err}`);
+    throw err;
+  }
+};
+
 export async function deleteSchedule(id: string) {
   const url = `${baseURL}/v1.0/scheduler/schedule/${id}`;
 

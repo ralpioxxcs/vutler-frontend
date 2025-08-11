@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NavigationProvider } from "@/contexts/navigationContext";
 import { TanstackQueryProvider } from "@/contexts/tanstackQueryContext";
@@ -13,6 +14,7 @@ import { Button } from "@heroui/react";
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [isNavVisible, setIsNavVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (isDesktop) {
@@ -30,7 +32,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="min-h-screen flex flex-col">
       <div className="fixed top-0 w-full bg-slate-700 text-white h-10 flex items-center shadow-md z-50">
         <div className="flex-1">
-          <h1 className="px-4 text-left text-xl font-bold">V U T L E R</h1>
+          <a href="/">
+            <h1 className="px-4 text-left text-xl font-bold">V U T L E R</h1>
+          </a>
         </div>
         <div className="w-14 flex justify-center items-center">
           <Button
@@ -62,7 +66,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         >
           {children}
         </main>
-        <CreateScheduleFab />
+        {pathname === "/schedule-list" && <CreateScheduleFab />}
       </div>
     </div>
   );
@@ -70,7 +74,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   return (
-    <HeroUIProvider locale="ko-KR" >
+    <HeroUIProvider locale="ko-KR">
       <NavigationProvider>
         <TanstackQueryProvider>
           <Layout>{children}</Layout>

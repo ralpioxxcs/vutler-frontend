@@ -115,7 +115,7 @@ export default function TodayScheduleModal({
 
       const sc = schedule.schedule_config;
       if (sc?.datetime) {
-        setExecutionTime(sc.datetime.split("T")[1].substring(0, 5));
+        setExecutionTime(sc.datetime.substring(11, 16));
       }
 
       if (ac?.type === "YOUTUBE" && ac?.url) {
@@ -194,11 +194,18 @@ export default function TodayScheduleModal({
       }
     }
 
+    const datePart =
+      initialDate || schedule?.schedule_config?.datetime?.split("T")[0];
+    if (!datePart) {
+      alert("날짜 정보가 없어 스케줄을 저장할 수 없습니다.");
+      return;
+    }
+
     const schedulePayload = {
       title: finalTitle,
       schedule_config: {
         type: "ONE_TIME",
-        datetime: `${initialDate}T${executionTime}:00`,
+        datetime: `${datePart}T${executionTime}:00`,
       },
       action_config: {
         deviceId: selectedDevice,
