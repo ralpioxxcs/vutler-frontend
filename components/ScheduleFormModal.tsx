@@ -71,7 +71,7 @@ export default function ScheduleFormModal({
   schedule,
 }: IScheduleFormModalProps) {
   const queryClient = useQueryClient();
-  const isEditMode = !!schedule;
+  const isEditMode = !!(schedule && schedule.id);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -114,7 +114,7 @@ export default function ScheduleFormModal({
     });
 
   useEffect(() => {
-    if (isEditMode && schedule) {
+    if (schedule) {
       setTitle(schedule.title || "");
       const ac = schedule.action_config;
       setSelectedDevice(ac?.deviceId || "");

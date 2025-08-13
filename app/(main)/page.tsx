@@ -1,13 +1,30 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import ScheduleCard from "@/components/schedule-card";
 import { getScheduleList } from "@/pages/api/schedule";
 import { Spinner, Button } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
-import CreateScheduleFab from "@/components/CreateScheduleFab";
+import ScheduleFormModal from "@/components/ScheduleFormModal";
+import { Mic, YouTube } from "@mui/icons-material";
 
-type FilterType = "ALL" | "ROUTINE" | "EVENT";
+// NOTE: API 응답과 일치하는 보다 정확한 타입을 정의했습니다.
+interface Schedule {
+  id: string;
+  title: string;
+  active: boolean;
+  updatedAt: string;
+  schedule_config?: {
+    type: 'RECURRING' | 'ONE_TIME' | 'HOURLY';
+    datetime?: string;
+    [key: string]: any;
+  };
+  action_config?: {
+    type: 'TTS' | 'YOUTUBE';
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 
 const DashboardStats = ({
   stats,
@@ -40,9 +57,9 @@ const DashboardStats = ({
 
 export default function Home() {
   const queryId = "main";
-  const [filter, setFilter] = useState<FilterType>("ALL");
+  const [modalSchedule, setModalSchedule] = useState<Schedule | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery<Schedule[]>({
     queryKey: [queryId],
     queryFn: getScheduleList,
   });
@@ -54,16 +71,13 @@ export default function Home() {
     const now = new Date();
     const total = data.length;
     const activeRoutines = data.filter(
-      (s: any) => s.active && s.schedule_config?.type === "RECURRING",
+      (s) => s.active && (s.schedule_config?.type === "RECURRING" || s.schedule_config?.type === "HOURLY"),
     ).length;
-    const upcomingEvents = data.filter((s: any) => {
+    const upcomingEvents = data.filter((s) => {
       if (!s.active) return false;
       const config = s.schedule_config;
       if (config?.type === "ONE_TIME") {
         return new Date(config.datetime) > now;
-      }
-      if (config?.type === "HOURLY") {
-        return true;
       }
       return false;
     }).length;
@@ -71,22 +85,23 @@ export default function Home() {
     return { total, routines: activeRoutines, events: upcomingEvents };
   }, [data]);
 
-  const filteredData = useMemo(() => {
+  const recentSchedules = useMemo(() => {
     if (!data) return [];
-    switch (filter) {
-      case "ROUTINE":
-        return data.filter((s: any) => s.schedule_config?.type === "RECURRING");
-      case "EVENT":
-        return data.filter(
-          (s: any) =>
-            s.schedule_config?.type === "ONE_TIME" ||
-            s.schedule_config?.type === "HOURLY",
-        );
-      case "ALL":
-      default:
-        return data;
+    return [...data]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 4);
+  }, [data]);
+
+  const handleQuickCreate = (schedule: Schedule) => {
+    const template = { ...schedule };
+    // id를 제거하여 수정 모드가 아닌 생성 모드로 전환
+    delete template.id;
+    // 일회성 스케줄의 경우 날짜를 현재 시간으로 초기화하도록 유도
+    if (template.schedule_config?.type === 'ONE_TIME') {
+      delete template.schedule_config.datetime;
     }
-  }, [data, filter]);
+    setModalSchedule(template);
+  };
 
   if (isLoading) {
     return (
@@ -100,58 +115,50 @@ export default function Home() {
     return <h1>Error</h1>;
   }
 
-  const FilterButtons = () => (
-    <div className="flex justify-center gap-2 mb-4">
-      <Button
-        variant={filter === "ALL" ? "solid" : "outline"}
-        onPress={() => setFilter("ALL")}
-      >
-        전체
-      </Button>
-      <Button
-        variant={filter === "ROUTINE" ? "solid" : "outline"}
-        onPress={() => setFilter("ROUTINE")}
-      >
-        루틴
-      </Button>
-      <Button
-        variant={filter === "EVENT" ? "solid" : "outline"}
-        onPress={() => setFilter("EVENT")}
-      >
-        이벤트
-      </Button>
-    </div>
-  );
+  const ActionIcon = ({ type }: { type: string }) => {
+    switch (type) {
+      case 'TTS':
+        return <Mic className="w-5 h-5 text-blue-500" />;
+      case 'YOUTUBE':
+        return <YouTube className="w-5 h-5 text-red-500" />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="p-4 sm:p-6 flex flex-col">
-      <h1 className="text-xl font-bold mb-6 text-gray-800">스케줄 요약</h1>
-      <DashboardStats stats={stats} />
+    <>
+      <div className="p-4 sm:p-6 flex flex-col">
+        <h1 className="text-xl font-bold mb-6 text-gray-800">스케줄 요약</h1>
+        <DashboardStats stats={stats} />
 
-      <h2 className="text-xl font-semibold mb-4 text-center">모든 스케줄</h2>
-      <FilterButtons />
-      {filteredData && filteredData.length > 0 ? (
-        <div className="grid grid-cols-1 gap-2">
-          {filteredData.map((schedule: any) => (
-            <ScheduleCard
-              key={schedule.id}
-              queryId={queryId}
-              schedule={schedule}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grow flex justify-center items-center bg-gray-100 text-gray-800 rounded-lg min-h-[200px]">
-          <p className="text-xl text-gray-500">
-            {filter === "ALL"
-              ? "표시할 스케줄이 없습니다."
-              : `표시할 ${
-                  filter === "ROUTINE" ? "루틴" : "이벤트"
-                }이(가) 없습니다.`}
-          </p>
-        </div>
+        <h2 className="text-xl font-semibold mb-4">빠른 스케줄 생성</h2>
+        {recentSchedules.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {recentSchedules.map((schedule) => (
+              <div key={schedule.id} className="p-4 bg-white rounded-lg shadow-sm border flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ActionIcon type={schedule.action_config?.type} />
+                  <p className="text-sm font-medium text-gray-800 truncate">{schedule.title}</p>
+                </div>
+                <Button size="sm" variant="outline" onPress={() => handleQuickCreate(schedule)}>
+                  생성
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex justify-center items-center bg-gray-100 text-gray-800 rounded-lg min-h-[100px]">
+            <p className="text-gray-500">최근 스케줄이 없습니다.</p>
+          </div>
+        )}
+      </div>
+      {modalSchedule && (
+        <ScheduleFormModal
+          onClose={() => setModalSchedule(null)}
+          schedule={modalSchedule}
+        />
       )}
-      <CreateScheduleFab />
-    </div>
+    </>
   );
 }

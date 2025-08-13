@@ -59,7 +59,7 @@ export async function updateDevice(
 
 export async function playAudio(
   deviceId: string,
-  playId: string
+  playId: string,
 ): Promise<any> {
   const url = `${baseURL}/v1.0/chromecast/device/play`;
 
@@ -82,5 +82,21 @@ export async function playAudio(
     console.error(`error is occured (${err})`);
     throw err;
   }
+}
 
+export async function getDeviceStatus(deviceId: string): Promise<any> {
+  if (!deviceId) {
+    return Promise.reject(new Error("Device ID is required"));
+  }
+  const url = `${baseURL}/v1.0/chromecast/device/${deviceId}/status`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (err) {
+    console.error(`Error fetching device status for ${deviceId}: ${err}`);
+    throw err;
+  }
 }
