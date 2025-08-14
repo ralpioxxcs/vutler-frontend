@@ -10,6 +10,7 @@ interface TodayScheduleCardProps {
   queryId: string;
   schedule: any;
   date: string;
+  isPast?: boolean;
 }
 
 // ... (ActionBadge and ScheduleTypeBadge components remain the same)
@@ -81,18 +82,22 @@ export default function TodayScheduleCard({
   queryId,
   schedule,
   date,
+  isPast,
 }: TodayScheduleCardProps) {
+  console.log(`Rendering TodayScheduleCard for schedule ID: ${schedule.title} , date: ${date}, isPast: ${isPast}`);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: schedule.id,
       data: { schedule }, // Pass schedule data for the drag overlay
+      disabled: isPast,
     });
 
   const style = {
     transform: CSS.Translate.toString(transform),
     zIndex: isDragging ? 100 : "auto",
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : undefined,
   };
 
   const openModal = () => setIsModalOpen(true);
@@ -100,7 +105,7 @@ export default function TodayScheduleCard({
 
   // Prevent modal from opening on drag
   const handleClick = (e: React.MouseEvent) => {
-    if (isDragging) {
+    if (isDragging || isPast) {
       e.preventDefault();
       return;
     }
@@ -115,7 +120,13 @@ export default function TodayScheduleCard({
         {...listeners}
         {...attributes}
         onClick={handleClick}
-        className={`flex items-center p-2 my-1 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
+        className={`flex items-center p-2 my-1 bg-white shadow-sm rounded-lg border transition-all duration-200 hover:shadow-md hover:border-gray-300 ${
+          !schedule.active && "opacity-50"
+        } ${
+          isPast
+            ? "opacity-50 cursor-not-allowed"
+            : "cursor-grab active:cursor-grabbing"
+        }`}
       >
         <div className="flex flex-col flex-grow min-w-0">
           <h2 className="text-sm font-semibold text-gray-800 truncate">
@@ -132,6 +143,7 @@ export default function TodayScheduleCard({
         <TodayScheduleModal
           onClose={closeModal}
           schedule={schedule}
+          initialTime={schedule.schedule_config?.time}
           initialDate={date}
         />
       )}

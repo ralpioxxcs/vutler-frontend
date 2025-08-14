@@ -204,7 +204,7 @@ export default function TodayScheduleModal({
     const schedulePayload = {
       title: finalTitle,
       schedule_config: {
-        type: "ONE_TIME",
+        type: "ONE_TIME", // TODO: 만약, 스케줄이 "RECURRING"인 경우!
         datetime: `${datePart}T${executionTime}:00`,
       },
       action_config: {

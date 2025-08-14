@@ -25,27 +25,8 @@ export async function getScheduleList(): Promise<Schedule[]> {
   }
 }
 
-async function getRoutineList(): Promise<Schedule[]> {
-  const params = new URLSearchParams({ scheduleTypes: "routine" });
-  const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (err) {
-    console.error(`Error fetching routine list: ${err}`);
-    throw err;
-  }
-}
-
 export async function getSchedulesByDate(dateString: string) {
   try {
-    const date = new Date(dateString);
-    const dayOfWeek = date.getDay();
-
     const params = new URLSearchParams({ date: dateString });
     const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
 
@@ -56,17 +37,9 @@ export async function getSchedulesByDate(dateString: string) {
         `server error: ${response.status} ${response.statusText}`,
       );
     }
-    const oneTimeSchedules = await response.json();
-    const routines = await getRoutineList();
+    const allSchdeulsOfDay = await response.json();
 
-    const todayRoutines = routines.filter((routine) => {
-      if (routine.schedule_config && routine.schedule_config.daysOfWeek) {
-        return routine.schedule_config.daysOfWeek.includes(dayOfWeek);
-      }
-      return false;
-    });
-
-    return [...oneTimeSchedules, ...todayRoutines];
+    return allSchdeulsOfDay;
   } catch (err) {
     console.error(`Error fetching schedule list: ${err}`);
     throw err;
@@ -160,4 +133,3 @@ export async function updateSchedule(id: string, patchData: any) {
     throw err;
   }
 }
-

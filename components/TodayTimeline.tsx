@@ -1,7 +1,15 @@
 
 "use client";
 
-import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
 import { Spinner } from "@heroui/react";
 import TodayScheduleCard from "./TodayScheduleCard";
@@ -50,6 +58,20 @@ const TodayTimeline = ({
   const queryClient = useQueryClient();
   const [activeDragItem, setActiveDragItem] = useState(null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+  );
+
   const { mutate: updateScheduleMutation } = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       updateSchedule(id, data),
@@ -72,7 +94,12 @@ const TodayTimeline = ({
 
     if (over && active.id !== over.id) {
       const scheduleToUpdate = schedules.find((s) => s.id === active.id);
-      if (!scheduleToUpdate) return;
+      if (
+        !scheduleToUpdate ||
+        scheduleToUpdate.schedule_config?.type !== "ONE_TIME"
+      ) {
+        return;
+      }
 
       const newHourMatch = over.id.match(/^hour-(\d+)$/);
       if (!newHourMatch) return;
@@ -122,21 +149,45 @@ const TodayTimeline = ({
   const getSchedulesForHour = (hour: number) => {
     return schedules
       .filter((schedule) => {
-        if (schedule.schedule_config.type === "ONE_TIME") {
-          const scheduleDate = new Date(schedule.schedule_config.datetime);
-          return scheduleDate.getHours() === hour;
+        const config = schedule.schedule_config;
+        if (!config) return false;
+
+        let scheduleHour;
+
+        if (config.type === "ONE_TIME" && config.datetime) {
+          scheduleHour = new Date(config.datetime).getHours();
+        } else if ((config.type === "RECURRING" || config.type === "ROUTINE") && config.time) {
+          scheduleHour = parseInt(config.time.split(":")[0], 10);
+        } else {
+          return false;
         }
-        return false; // Only handle ONE_TIME for now
+
+        return scheduleHour === hour;
       })
-      .sort(
-        (a, b) =>
-          new Date(a.schedule_config.datetime).getTime() -
-          new Date(b.schedule_config.datetime).getTime(),
-      );
+      .sort((a, b) => {
+        const aConfig = a.schedule_config;
+        const bConfig = b.schedule_config;
+
+        const getSortableTime = (config: any) => {
+          if (config.type === "ONE_TIME" && config.datetime) {
+            return new Date(config.datetime).getTime();
+          }
+          if (
+            (config.type === "ROUTINE" || config.type === "RECURRING") &&
+            config.time
+          ) {
+            return new Date(`${date}T${config.time}`).getTime();
+          }
+          return 0;
+        };
+
+        return getSortableTime(aConfig) - getSortableTime(bConfig);
+      });
   };
 
   return (
     <DndContext
+      sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -158,14 +209,33 @@ const TodayTimeline = ({
                   className={`flex-1 border-t pt-2 ${isCurrentHour ? "border-blue-300" : "border-gray-200"}`}
                 >
                   {schedulesForHour.length > 0 ? (
-                    schedulesForHour.map((schedule) => (
-                      <TodayScheduleCard
-                        key={schedule.id}
-                        queryId="todaySchedules"
-                        schedule={schedule}
-                        date={date}
-                      />
-                    ))
+                    schedulesForHour.map((schedule) => {
+                      const config = schedule.schedule_config;
+                      let isPast = false;
+                      if (isToday || true) {
+                        const now = new Date();
+                        let scheduleDate;
+
+                        if (config.type === "ONE_TIME" && config.datetime) {
+                          scheduleDate = new Date(config.datetime);
+                        } else if (config.type === "RECURRING" && config.time) {
+                          scheduleDate = new Date(`${date}T${config.time}`);
+                        }
+
+                        if (scheduleDate && scheduleDate < now) {
+                          isPast = true;
+                        }
+                      }
+                      return (
+                        <TodayScheduleCard
+                          key={schedule.id}
+                          queryId="todaySchedules"
+                          schedule={schedule}
+                          date={date}
+                          isPast={isPast}
+                        />
+                      );
+                    })
                   ) : (
                     <div className="h-8"></div>
                   )}
