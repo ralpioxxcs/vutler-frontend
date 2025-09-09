@@ -78,9 +78,7 @@ export default function SettingsPage() {
           ) : selectedTab === "add" ? (
             <AddDeviceForm />
           ) : (
-            <div className="text-center p-4">
-              기기를 선택해주세요.
-            </div>
+            <div className="text-center p-4">기기를 선택해주세요.</div>
           )}
         </div>
       </div>

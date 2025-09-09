@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+
 import { usePathname } from "next/navigation";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { NavigationProvider } from "@/contexts/navigationContext";
+import { ScheduleProvider } from "@/contexts/createScheduleContext";
 import { TanstackQueryProvider } from "@/contexts/tanstackQueryContext";
 import { HeroUIProvider } from "@heroui/react";
 import { Sidebar } from "@/components/sidebar";
@@ -17,11 +20,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isDesktop) {
-      setIsNavVisible(true);
-    } else {
-      setIsNavVisible(false);
-    }
+    setIsNavVisible(isDesktop);
   }, [isDesktop]);
 
   const toggleNav = () => {
@@ -32,9 +31,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="min-h-screen flex flex-col">
       <div className="fixed top-0 w-full bg-slate-700 text-white h-10 flex items-center shadow-md z-50">
         <div className="flex-1">
-          <a href="/">
+          <Link href="/">
             <h1 className="px-4 text-left text-xl font-bold">V U T L E R</h1>
-          </a>
+          </Link>
         </div>
         <div className="w-14 flex justify-center items-center">
           <Button
@@ -77,7 +76,9 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     <HeroUIProvider locale="ko-KR">
       <NavigationProvider>
         <TanstackQueryProvider>
-          <Layout>{children}</Layout>
+          <ScheduleProvider>
+            <Layout>{children}</Layout>
+          </ScheduleProvider>
         </TanstackQueryProvider>
       </NavigationProvider>
     </HeroUIProvider>
