@@ -55,8 +55,6 @@ interface ITodayScheduleModalProps {
   initialDate?: string;
 }
 
-type ActionType = "TTS" | "YOUTUBE";
-
 export default function TodayScheduleModal({
   onClose,
   schedule,
@@ -267,9 +265,7 @@ export default function TodayScheduleModal({
                   className="text-base"
                 >
                   {devices?.data.map((device: Device) => (
-                    <SelectItem key={device.deviceId} value={device.deviceId}>
-                      {device.name}
-                    </SelectItem>
+                    <SelectItem key={device.deviceId}>{device.name}</SelectItem>
                   ))}
                 </Select>
               )}

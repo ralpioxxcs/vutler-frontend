@@ -6,25 +6,9 @@ import { Spinner, Button } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import ScheduleFormModal from "@/components/ScheduleFormModal";
 import { Mic, YouTube } from "@mui/icons-material";
+import type { Schedule } from "Type";
 
 // NOTE: API 응답과 일치하는 보다 정확한 타입을 정의했습니다.
-interface Schedule {
-  id: string;
-  title: string;
-  active: boolean;
-  updatedAt: string;
-  schedule_config?: {
-    type: 'RECURRING' | 'ONE_TIME' | 'HOURLY';
-    datetime?: string;
-    [key: string]: any;
-  };
-  action_config?: {
-    type: 'TTS' | 'YOUTUBE';
-    [key: string]: any;
-  };
-  [key: string]: any;
-}
-
 
 const DashboardStats = ({
   stats,
@@ -59,9 +43,9 @@ export default function Home() {
   const queryId = "main";
   const [modalSchedule, setModalSchedule] = useState<Schedule | null>(null);
 
-  const { data, isLoading, isError } = useQuery<Schedule[]>({
+  const { data, isLoading, isError } = useQuery({
     queryKey: [queryId],
-    queryFn: getScheduleList,
+    queryFn: () => getScheduleList(),
   });
 
   const stats = useMemo(() => {
@@ -71,7 +55,10 @@ export default function Home() {
     const now = new Date();
     const total = data.length;
     const activeRoutines = data.filter(
-      (s) => s.active && (s.schedule_config?.type === "RECURRING" || s.schedule_config?.type === "HOURLY"),
+      (s) =>
+        s.active &&
+        (s.schedule_config?.type === "RECURRING" ||
+          s.schedule_config?.type === "HOURLY"),
     ).length;
     const upcomingEvents = data.filter((s) => {
       if (!s.active) return false;
@@ -88,7 +75,10 @@ export default function Home() {
   const recentSchedules = useMemo(() => {
     if (!data) return [];
     return [...data]
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
       .slice(0, 4);
   }, [data]);
 
@@ -97,7 +87,7 @@ export default function Home() {
     // id를 제거하여 수정 모드가 아닌 생성 모드로 전환
     delete template.id;
     // 일회성 스케줄의 경우 날짜를 현재 시간으로 초기화하도록 유도
-    if (template.schedule_config?.type === 'ONE_TIME') {
+    if (template.schedule_config?.type === "ONE_TIME") {
       delete template.schedule_config.datetime;
     }
     setModalSchedule(template);
@@ -117,9 +107,9 @@ export default function Home() {
 
   const ActionIcon = ({ type }: { type: string }) => {
     switch (type) {
-      case 'TTS':
+      case "TTS":
         return <Mic className="w-5 h-5 text-blue-500" />;
-      case 'YOUTUBE':
+      case "YOUTUBE":
         return <YouTube className="w-5 h-5 text-red-500" />;
       default:
         return null;
@@ -136,12 +126,21 @@ export default function Home() {
         {recentSchedules.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {recentSchedules.map((schedule) => (
-              <div key={schedule.id} className="p-4 bg-white rounded-lg shadow-sm border flex items-center justify-between">
+              <div
+                key={schedule.id}
+                className="p-4 bg-white rounded-lg shadow-sm border flex items-center justify-between"
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <ActionIcon type={schedule.action_config?.type} />
-                  <p className="text-sm font-medium text-gray-800 truncate">{schedule.title}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">
+                    {schedule.title}
+                  </p>
                 </div>
-                <Button size="sm" variant="outline" onPress={() => handleQuickCreate(schedule)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onPress={() => handleQuickCreate(schedule)}
+                >
                   생성
                 </Button>
               </div>

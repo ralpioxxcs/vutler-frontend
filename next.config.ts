@@ -6,11 +6,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   output: "standalone",
-  env: {
-    NEXT_PUBLIC_DEVICE_SERVER: "http://api.vutler.io",
-    NEXT_PUBLIC_SCHEDULE_SERVER: "http://api.vutler.io",
-    NEXT_PUBLIC_TTS_SERVER: "http://api.vutler.io",
-  },
 };
 
 export default withPWA({

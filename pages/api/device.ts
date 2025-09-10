@@ -1,13 +1,15 @@
-import { Device, TTS } from "Type";
+import type { Device } from "Type";
 
 const baseURL = process.env.NEXT_PUBLIC_DEVICE_SERVER;
 
-export async function getDevice(): Promise<any> {
+export async function getDevice(): Promise<{
+  data: Device[];
+  status: "success";
+}> {
   const url = `${baseURL}/v1.0/chromecast/device`;
 
   try {
     const response = await fetch(url);
-    console.log(response);
     const json = await response.json();
     return json;
   } catch (err) {

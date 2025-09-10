@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   Button,
   Input,
@@ -23,8 +23,10 @@ import {
 } from "@/pages/api/schedule";
 import { getDevice } from "@/pages/api/device";
 import { getYoutubeVideoInfo } from "@/pages/api/youtube";
-import type { Device } from "Type";
+import type { Device, ScheduleType } from "Type";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useSchedule } from "@/contexts/createScheduleContext";
+import { daysOfWeek } from "@/config";
 
 // Helper functions
 const getCurrentDateTimeLocal = () => {
@@ -63,38 +65,50 @@ interface IScheduleFormModalProps {
   schedule?: any;
 }
 
-type ActionType = "TTS" | "YOUTUBE";
-type ScheduleType = "ONE_TIME" | "RECURRING" | "HOURLY";
-
-export default function ScheduleFormModal({
-  onClose,
-  schedule,
-}: IScheduleFormModalProps) {
+const ScheduleFormModal = ({ onClose, schedule }: IScheduleFormModalProps) => {
   const queryClient = useQueryClient();
   const isEditMode = !!(schedule && schedule.id);
 
-  // Form state
-  const [title, setTitle] = useState("");
-  const [selectedDevice, setSelectedDevice] = useState<string>("");
-  const [actionType, setActionType] = useState<ActionType>("TTS");
-  const [ttsText, setTtsText] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [youtubeVideoTitle, setYoutubeVideoTitle] = useState("");
-  const [playbackRange, setPlaybackRange] = useState<[number, number]>([0, 60]);
-  const [totalDuration, setTotalDuration] = useState<number | null>(null);
-  const [scheduleType, setScheduleType] = useState<ScheduleType>("ONE_TIME");
-  const [oneTimeDate, setOneTimeDate] = useState(getCurrentDateTimeLocal());
-  const [recurringDays, setRecurringDays] = useState<string[]>([]);
-  const [executionTime, setExecutionTime] = useState(getCurrentTime());
-  const [volume, setVolume] = useState(50);
+  const {
+    state: {
+      title,
+      selectedDevice,
+      actionType,
+      ttsText,
+      youtubeUrl,
+      youtubeVideoTitle,
+      playbackRange,
+      totalDuration,
+      scheduleType,
+      oneTimeDate,
+      recurringDays,
+      executionTime,
+      volume,
+    },
+    reducer: {
+      setTitle,
+      setSelectedDevice,
+      setActionType,
+      setTtsText,
+      setYoutubeUrl,
+      setYoutubeVideoTitle,
+      setPlaybackRange,
+      setTotalDuration,
+      setScheduleType,
+      setOneTimeDate,
+      setRecurringDays,
+      setExecutionTime,
+      setVolume,
+    },
+  } = useSchedule();
 
   const startTime = playbackRange[0];
   const duration = playbackRange[1] - playbackRange[0];
 
   // Mutations and Queries
-  const { data: devices, isLoading: isLoadingDevices } = useQuery<any>({
+  const { data: devices, isLoading: isLoadingDevices } = useQuery({
     queryKey: ["devices"],
-    queryFn: getDevice,
+    queryFn: () => getDevice(),
   });
 
   const { mutate: fetchVideoInfo, isPending: isFetchingVideoInfo } =
@@ -142,12 +156,16 @@ export default function ScheduleFormModal({
       }
     }
   }, [isEditMode, schedule, fetchVideoInfo]);
+  // lint 경고
+  // }, [isEditMode, schedule, fetchVideoInfo, setSelectedDevice]);
 
   useEffect(() => {
-    if (!isEditMode && devices?.data?.length > 0 && !selectedDevice) {
+    if (!isEditMode && devices?.data?.length && !selectedDevice) {
       setSelectedDevice(devices.data[0].deviceId);
     }
   }, [devices, isEditMode, selectedDevice]);
+  // lint 경고
+  // }, [devices, isEditMode, selectedDevice, setSelectedDevice]);
 
   const handleYoutubeUrlChange = (url: string) => {
     setYoutubeUrl(url);
@@ -224,7 +242,7 @@ export default function ScheduleFormModal({
       title: finalTitle,
       schedule_config: {
         type: scheduleType,
-        datetime: scheduleType === 'ONE_TIME' ? `${oneTimeDate}:00` : undefined,
+        datetime: scheduleType === "ONE_TIME" ? `${oneTimeDate}:00` : undefined,
         days: recurringDays,
         time: executionTime,
       },
@@ -277,11 +295,9 @@ export default function ScheduleFormModal({
                   selectedKeys={[selectedDevice]}
                   onChange={(e) => setSelectedDevice(e.target.value)}
                 >
-                  {devices?.data.map((device: Device) => (
-                    <SelectItem key={device.deviceId} value={device.deviceId}>
-                      {device.name}
-                    </SelectItem>
-                  ))}
+                  {devices?.data?.map((device: Device) => (
+                    <SelectItem key={device.deviceId}>{device.name}</SelectItem>
+                  )) || null}
                 </Select>
               )}
             </div>
@@ -295,12 +311,8 @@ export default function ScheduleFormModal({
                 selectedKeys={[actionType]}
                 onChange={(e) => setActionType(e.target.value as ActionType)}
               >
-                <SelectItem key="TTS" value="TTS">
-                  텍스트 읽어주기
-                </SelectItem>
-                <SelectItem key="YOUTUBE" value="YOUTUBE">
-                  유튜브 재생
-                </SelectItem>
+                <SelectItem key="TTS">텍스트 읽어주기</SelectItem>
+                <SelectItem key="YOUTUBE">유튜브 재생</SelectItem>
               </Select>
               {actionType === "TTS" && (
                 <Input
@@ -377,15 +389,9 @@ export default function ScheduleFormModal({
                   setScheduleType(e.target.value as ScheduleType)
                 }
               >
-                <SelectItem key="ONE_TIME" value="ONE_TIME">
-                  한 번만 실행
-                </SelectItem>
-                <SelectItem key="RECURRING" value="RECURRING">
-                  반복 실행
-                </SelectItem>
-                <SelectItem key="HOURLY" value="HOURLY">
-                  정각마다 실행
-                </SelectItem>
+                <SelectItem key="ONE_TIME">한 번만 실행</SelectItem>
+                <SelectItem key="RECURRING">반복 실행</SelectItem>
+                <SelectItem key="HOURLY">정각마다 실행</SelectItem>
               </Select>
               {scheduleType === "ONE_TIME" && (
                 <Input
@@ -405,7 +411,7 @@ export default function ScheduleFormModal({
                     onChange={(e) => setExecutionTime(e.target.value)}
                   />
                   <div className="flex flex-wrap gap-2">
-                    {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
+                    {daysOfWeek.map((day) => (
                       <Button
                         key={day}
                         size="sm"
@@ -450,4 +456,5 @@ export default function ScheduleFormModal({
       </ModalContent>
     </Modal>
   );
-}
+};
+export default ScheduleFormModal;

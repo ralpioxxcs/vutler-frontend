@@ -1,24 +1,49 @@
 declare module "Type" {
-  type Schedule = {
+  type ActionType = "TTS" | "YOUTUBE";
+  type ScheduleType = "ONE_TIME" | "RECURRING" | "HOURLY";
+
+  type BaseSchedule = {
     id: string;
+    updatedAt: string;
+    createdAt: string;
     title: string;
-    description: string;
-    type: "one_time" | "recurring";
-    category: "event" | "on_time" | "routine" | "task";
+    description: string | null;
     interval: string;
     active: boolean;
     removeOnComplete: boolean;
     startDate: string;
     endDate: string;
     tasks: Task[];
-    schedule_config?: {
-      daysOfWeek?: number[];
-      time?: string;
-      datetime?: string;
+    schedule_config: {
+      days: string[];
+      time: string;
     };
-    updatedAt: string;
-    createdAt: string;
+    action_config: {
+      url: string;
+      text: string;
+      type: ActionType;
+      volume: number;
+      endTime: number;
+      deviceId: string;
+      duration: number;
+      startTime: number;
+    };
   };
+
+  interface OneTimeSchedule extends BaseSchedule {
+    schedule_config: BaseSchedule["schedule_config"] & {
+      type: "ONE_TIME";
+      datetime: string;
+    };
+  }
+
+  interface OtherSchedule extends BaseSchedule {
+    schedule_config: BaseSchedule["schedule_config"] & {
+      type: "RECURRING" | "HOURLY";
+    };
+  }
+
+  type Schedule = OneTimeSchedule | OtherSchedule;
 
   type Task = {
     id: string;
@@ -35,7 +60,7 @@ declare module "Type" {
   };
 
   type Device = {
-    id: string;
+    deviceId: string;
     name: string;
     ip: string;
     volume: number;
