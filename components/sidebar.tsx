@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-import HomeIcon from "@mui/icons-material/Home";
-import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
-import SettingsIcon from "@mui/icons-material/Settings";
-import { ViewList, ViewTimeline } from "@mui/icons-material";
+import HomeIcon from '@mui/icons-material/Home';
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { ViewList, ViewTimeline } from '@mui/icons-material';
 
 export const Sidebar = ({
   isNavVisible,
@@ -21,11 +21,11 @@ export const Sidebar = ({
   const pathname = usePathname();
 
   const navItems = [
-    { label: "홈", path: "/", icon: <HomeIcon /> },
-    { label: "시간표", path: "/time-line", icon: <ViewTimeline /> },
-    { label: "일정", path: "/schedule-list", icon: <ViewList /> },
-    { label: "할 일", path: "/todo", icon: <PlaylistAddCheckIcon /> },
-    { label: "설정", path: "/setting", icon: <SettingsIcon /> },
+    { label: '홈', path: '/', icon: <HomeIcon /> },
+    { label: '시간표', path: '/time-line', icon: <ViewTimeline /> },
+    { label: '일정', path: '/schedule-list', icon: <ViewList /> },
+    { label: '할 일', path: '/todo', icon: <PlaylistAddCheckIcon /> },
+    { label: '설정', path: '/setting', icon: <SettingsIcon /> },
   ];
 
   const handleLinkClick = () => {
@@ -36,26 +36,24 @@ export const Sidebar = ({
 
   return (
     <nav
-      className={`${
-        isNavVisible ? "translate-x-0" : "translate-x-full"
-      } fixed top-0 right-0 bg-slate-700 text-white h-full w-14 shadow-lg transition-transform duration-300 z-40`}
+      className={`${isNavVisible ? 'translate-x-0' : 'translate-x-full'
+        } fixed top-0 right-0 bg-slate-700 text-white h-full w-14 shadow-lg transition-transform duration-300 z-40`}
     >
-      <ul className="space-y-0 mt-12">
+      <ul className='space-y-0 mt-12'>
         {navItems.map((item) => (
           <li key={item.path}>
             <Link
               href={item.path}
               onClick={handleLinkClick}
-              className={`block w-full rounded-xl ${
-                pathname === item.path ? "bg-zinc-600" : "hover:bg-zinc-700"
-              }`}
+              className={`block w-full rounded-xl ${pathname === item.path ? 'bg-zinc-600' : 'hover:bg-zinc-700'
+                }`}
             >
               <button
-                type="button"
-                className="flex flex-col items-center justify-center h-16 w-full"
+                type='button'
+                className='flex flex-col items-center justify-center h-16 w-full'
               >
                 {item.icon}
-                <span className="text-xs text-gray-400 mt-1">{item.label}</span>
+                <span className='text-xs text-gray-400 mt-1'>{item.label}</span>
               </button>
             </Link>
           </li>
