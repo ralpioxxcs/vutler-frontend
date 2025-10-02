@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { login } from '@/pages/api/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,19 +19,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || '로그인에 실패했습니다.');
-      }
-
+      await login({ email, password });
       await queryClient.invalidateQueries({ queryKey: ['me'] });
       router.push('/'); // Redirect to main page on successful login
     } catch (err) {

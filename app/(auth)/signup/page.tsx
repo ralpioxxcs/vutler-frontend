@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { register } from '@/pages/api/auth';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
@@ -21,19 +22,7 @@ export default function SignUpPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, username }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Something went wrong');
-      }
-
+      await register({ email, password, username });
       // Handle successful registration
       console.log('Registration successful');
       router.push('/login'); // Redirect to login page after successful registration
