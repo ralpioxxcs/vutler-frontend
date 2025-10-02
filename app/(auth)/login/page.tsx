@@ -2,23 +2,47 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Implement login logic here
-    console.log('Logging in with:', { email, password });
-    // router.push('/'); // Redirect to main page on successful login
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('http://localhost:5000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || '로그인에 실패했습니다.');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      router.push('/'); // Redirect to main page on successful login
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = () => {
-    // TODO: Implement sign up logic or redirect to a sign up page
     console.log('Redirecting to sign up');
-    // router.push('/signup');
+    router.push('/signup');
   };
 
   return (
@@ -66,12 +90,14 @@ export default function LoginPage() {
               placeholder='••••••••'
             />
           </div>
+          {error && <p className='text-sm text-red-600'>{error}</p>}
           <div>
             <button
               type='submit'
-              className='w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+              disabled={isLoading}
+              className='w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50'
             >
-              로그인하기
+              {isLoading ? '로그인 중...' : '로그인하기'}
             </button>
           </div>
         </form>

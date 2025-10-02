@@ -7,6 +7,6 @@ const apiClient = axios.create({
 });
 
 export const getMyInfo = async () => {
-  const { data } = await apiClient.get('/users/me');
+  const { data } = await apiClient.get('/users/profile');
   return data;
 };
