@@ -1,11 +1,12 @@
 'use client';
 
 import { useAuth } from '@/contexts/authContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Sidebar } from '@/components/sidebar';
+import { ProfileDropdown } from '@/components/ProfileDropdown';
 import CreateScheduleFab from '@/components/CreateScheduleFab';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Button } from '@heroui/react';
@@ -32,7 +33,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <h1 className='px-4 text-left text-xl font-bold'>V U T L E R</h1>
           </Link>
         </div>
-        <div className='w-14 flex justify-center items-center'>
+        <div className='flex items-center gap-2 px-2'>
+          <ProfileDropdown />
           <Button
             variant='light'
             isIconOnly
@@ -78,7 +80,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [user, isLoading, router]);
 
   if (isLoading || !user) {
-    return <Spinner />;
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center">
+        <Spinner size="lg" />
+        <p className="mt-4 text-gray-600">로딩 중...</p>
+      </div>
+    );
   }
 
   return <AuthenticatedLayout>{children}</AuthenticatedLayout>;

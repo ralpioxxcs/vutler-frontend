@@ -15,7 +15,7 @@ export default async function handler(
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
-  const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
+  const USER_SERVICE_URL = process.env.NEXT_PUBLIC_USER_SERVER;
   if (!USER_SERVICE_URL) {
     console.error('USER_SERVICE_URL is not defined in environment variables');
     return res.status(500).json({ message: 'Internal server configuration error' });
