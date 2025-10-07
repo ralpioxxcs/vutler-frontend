@@ -22,7 +22,7 @@ import {
   updateSchedule,
   deleteSchedule,
 } from "@/pages/api/schedule";
-import { getDevice } from "@/pages/api/device";
+import { getUserDevices } from "@/pages/api/user";
 import { getYoutubeVideoInfo } from "@/pages/api/youtube";
 import type { Device } from "Type";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -127,12 +127,12 @@ export default function TodayScheduleModal({
 
   const { data: devices, isLoading: isLoadingDevices } = useQuery<any>({
     queryKey: ["devices"],
-    queryFn: getDevice,
+    queryFn: getUserDevices,
   });
 
   useEffect(() => {
-    if (!isEditMode && devices?.data?.length > 0 && !selectedDevice) {
-      setSelectedDevice(devices.data[0].deviceId);
+    if (!isEditMode && devices?.length > 0 && !selectedDevice) {
+      setSelectedDevice(devices[0].device_id);
     }
   }, [devices, isEditMode, selectedDevice]);
 
@@ -264,8 +264,8 @@ export default function TodayScheduleModal({
                   onChange={(e) => setSelectedDevice(e.target.value)}
                   className="text-base"
                 >
-                  {devices?.data.map((device: Device) => (
-                    <SelectItem key={device.deviceId}>{device.name}</SelectItem>
+                  {devices?.map((device: any) => (
+                    <SelectItem key={device.device_id}>{device.display_name}</SelectItem>
                   ))}
                 </Select>
               )}

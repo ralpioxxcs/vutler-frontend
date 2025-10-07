@@ -1,3 +1,5 @@
+import { getAuthHeaders } from "@/lib/auth";
+
 const baseURL = process.env.NEXT_PUBLIC_SCHEDULE_SERVER;
 
 export async function getYoutubeVideoInfo(videoId: string) {
@@ -5,7 +7,11 @@ export async function getYoutubeVideoInfo(videoId: string) {
   const url = `${baseURL}/v1.0/scheduler/youtube/video-info?${params}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

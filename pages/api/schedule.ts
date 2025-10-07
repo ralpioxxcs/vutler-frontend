@@ -1,4 +1,5 @@
 import type { Schedule } from "Type";
+import { getAuthHeaders } from "@/lib/auth";
 
 const baseURL = process.env.NEXT_PUBLIC_SCHEDULE_SERVER;
 
@@ -14,7 +15,11 @@ export async function getScheduleList(): Promise<Schedule[]> {
   const url = `${baseURL}/v1.0/scheduler/schedule`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -30,7 +35,11 @@ async function getRoutineList(): Promise<Schedule[]> {
   const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -49,7 +58,11 @@ export async function getSchedulesByDate(dateString: string) {
     const params = new URLSearchParams({ date: dateString });
     const url = `${baseURL}/v1.0/scheduler/schedule?${params}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -81,6 +94,7 @@ export async function createSchedule(scheduleData: object) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(scheduleData),
     });
@@ -110,6 +124,7 @@ export const copySchedulesByDate = async ({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({ sourceDate, destinationDate }),
     });
@@ -130,6 +145,9 @@ export async function deleteSchedule(id: string) {
   try {
     const response = await fetch(url, {
       method: "DELETE",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -148,6 +166,7 @@ export async function updateSchedule(id: string, patchData: any) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(patchData),
     });
