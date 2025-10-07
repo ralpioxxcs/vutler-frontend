@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Mic, YouTube } from "@mui/icons-material";
-import TodayScheduleModal from "./TodayScheduleModal";
+import { Bars3Icon } from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
 
 interface TodayScheduleCardProps {
   queryId: string;
@@ -82,7 +82,7 @@ export default function TodayScheduleCard({
   schedule,
   date,
 }: TodayScheduleCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: schedule.id,
@@ -95,46 +95,39 @@ export default function TodayScheduleCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-
-  // Prevent modal from opening on drag
-  const handleClick = (e: React.MouseEvent) => {
-    if (isDragging) {
-      e.preventDefault();
-      return;
-    }
-    openModal();
+  const handleEdit = () => {
+    router.push(`/schedule/edit?id=${schedule.id}`);
   };
 
   return (
-    <>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center p-2 my-1 bg-white shadow-sm rounded-lg border transition-all duration-200 hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
+    >
+      {/* Drag Handle - Only this part is draggable */}
       <div
-        ref={setNodeRef}
-        style={style}
         {...listeners}
         {...attributes}
-        onClick={handleClick}
-        className={`flex items-center p-2 my-1 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
+        className="mr-2 p-1 cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded transition-colors"
+        title="드래그하여 시간 변경"
       >
-        <div className="flex flex-col flex-grow min-w-0">
-          <h2 className="text-sm font-semibold text-gray-800 truncate">
-            {schedule.title}
-          </h2>
-          <div className="flex items-center gap-2 mt-1">
-            <ScheduleTypeBadge config={schedule.schedule_config} />
-            <ActionBadge config={schedule.action_config} />
-          </div>
-        </div>
+        <Bars3Icon className="w-4 h-4 text-gray-400" />
       </div>
 
-      {isModalOpen && (
-        <TodayScheduleModal
-          onClose={closeModal}
-          schedule={schedule}
-          initialDate={date}
-        />
-      )}
-    </>
+      {/* Clickable content area */}
+      <div
+        onClick={handleEdit}
+        className="flex flex-col flex-grow min-w-0 cursor-pointer"
+      >
+        <h2 className="text-sm font-semibold text-gray-800 truncate">
+          {schedule.title}
+        </h2>
+        <div className="flex items-center gap-2 mt-1">
+          <ScheduleTypeBadge config={schedule.schedule_config} />
+          <ActionBadge config={schedule.action_config} />
+        </div>
+      </div>
+    </div>
   );
 }

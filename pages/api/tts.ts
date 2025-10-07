@@ -1,4 +1,5 @@
 import { Device, TTS } from "Type";
+import { getAuthHeaders } from "@/lib/auth";
 
 const baseURL = process.env.NEXT_PUBLIC_TTS_SERVER;
 
@@ -6,7 +7,11 @@ export async function getTTS(): Promise<any> {
   const url = `${baseURL}/v1.0/tts`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     console.log(response);
     const json = await response.json();
     return json;
@@ -21,7 +26,11 @@ export async function getTTSConfiguration(ttsId: string): Promise<TTS[]> {
   const url = `${baseURL}/v1.0/tts/${ttsId}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     console.log("getTTSresponse: ", response);
     const json = await response.json();
     return json;
@@ -51,6 +60,7 @@ export async function setTTSConfiguration(
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -74,6 +84,7 @@ export async function makeSpeech(ttsId: string, text: string): Promise<any> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });

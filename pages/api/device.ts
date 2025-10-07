@@ -1,4 +1,5 @@
 import type { Device } from "Type";
+import { getAuthHeaders } from "@/lib/auth";
 
 const baseURL = process.env.NEXT_PUBLIC_DEVICE_SERVER;
 
@@ -9,7 +10,11 @@ export async function getDevice(): Promise<{
   const url = `${baseURL}/v1.0/chromecast/device`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     const json = await response.json();
     return json;
   } catch (err) {
@@ -23,7 +28,11 @@ export async function getDeviceConnection(deviceId: string): Promise<Device[]> {
   const url = `${baseURL}/v1.0/chromecast/device/${deviceId}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     const json = await response.json();
     return json;
   } catch (err) {
@@ -49,6 +58,7 @@ export async function updateDevice(
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -74,6 +84,7 @@ export async function playAudio(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -92,7 +103,11 @@ export async function getDeviceStatus(deviceId: string): Promise<any> {
   }
   const url = `${baseURL}/v1.0/chromecast/device/${deviceId}/status`;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

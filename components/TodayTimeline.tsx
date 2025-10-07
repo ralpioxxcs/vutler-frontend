@@ -14,6 +14,7 @@ interface ITodayTimelineProps {
   onTimeClick: (hour: number) => void;
   isToday: boolean;
   date: string;
+  compactMode?: boolean;
 }
 
 const DroppableHour = ({
@@ -43,6 +44,7 @@ const TodayTimeline = ({
   onTimeClick,
   isToday,
   date,
+  compactMode = false,
 }: ITodayTimelineProps) => {
   const now = new Date();
   const currentHour = now.getHours();
@@ -140,21 +142,43 @@ const TodayTimeline = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
+      <div className="space-y-1 px-2">
         {hours.map((hour) => {
           const schedulesForHour = getSchedulesForHour(hour);
           const isCurrentHour = isToday && hour === currentHour;
+          const isEmpty = schedulesForHour.length === 0;
+          const isAMPMBoundary = hour === 0 || hour === 12;
+
+          // Skip empty hours in compact mode, but always show current hour and AM/PM boundaries
+          if (compactMode && isEmpty && !isCurrentHour && !isAMPMBoundary) {
+            return null;
+          }
+
           return (
             <DroppableHour hour={hour} key={hour}>
-              <div className="flex gap-4 items-start">
+              <div
+                className="flex gap-4 items-start py-2"
+                data-hour={hour}
+              >
+                {isAMPMBoundary && (
+                  <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent -mt-2" />
+                )}
                 <div
-                  className={`w-16 text-right text-sm cursor-pointer hover:text-blue-600 transition-colors ${isCurrentHour ? "font-bold text-blue-500" : "text-gray-500"}`}
+                  className={`w-20 text-right text-sm cursor-pointer hover:text-blue-600 transition-colors ${
+                    isCurrentHour
+                      ? "font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md"
+                      : "text-gray-500"
+                  }`}
                   onClick={() => onTimeClick(hour)}
                 >
                   {formatHour(hour)}
                 </div>
                 <div
-                  className={`flex-1 border-t pt-2 ${isCurrentHour ? "border-blue-300" : "border-gray-200"}`}
+                  className={`flex-1 border-t pt-2 ${
+                    isCurrentHour
+                      ? "border-blue-400 border-2"
+                      : "border-gray-200"
+                  }`}
                 >
                   {schedulesForHour.length > 0 ? (
                     schedulesForHour.map((schedule) => (
@@ -166,7 +190,13 @@ const TodayTimeline = ({
                       />
                     ))
                   ) : (
-                    <div className="h-8"></div>
+                    <div
+                      className={`${compactMode ? "h-4" : "h-8"} ${
+                        isCurrentHour
+                          ? "bg-blue-50 rounded"
+                          : ""
+                      }`}
+                    ></div>
                   )}
                 </div>
               </div>
