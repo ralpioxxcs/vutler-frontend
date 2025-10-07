@@ -6,14 +6,13 @@ import {
   createSchedule,
 } from "@/pages/api/schedule";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ClockIcon,
   TrashIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { Mic, YouTube } from "@mui/icons-material";
-import ScheduleFormModal from "./ScheduleFormModal";
 
 interface ScheduleProps {
   queryId: string;
@@ -125,17 +124,13 @@ const formatTtl = (ttlInSeconds: number): string => {
 };
 
 export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isClosed, setIsCloseClick] = useState(false);
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => {
-    setIsCloseClick(true);
-    setIsModalOpen(false);
-  };
-
+  const router = useRouter();
   const displayTime = formatScheduleTime(schedule.schedule_config);
-
   const queryClient = useQueryClient();
+
+  const handleEdit = () => {
+    router.push(`/schedule/edit?id=${schedule.id}`);
+  };
 
   const { mutate: handleDuplicate } = useMutation({
     mutationFn: () => {
@@ -197,66 +192,60 @@ export default function ScheduleCard({ queryId, schedule }: ScheduleProps) {
   });
 
   return (
-    <>
+    <div
+      onClick={handleEdit}
+      className={`flex items-center p-4 my-2 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
+    >
       <div
-        onClick={openModal}
-        className={`flex items-center p-4 my-2 bg-white shadow-sm rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md hover:border-gray-300 ${!schedule.active && "opacity-50"}`}
-      >
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            handleActiveToggle();
-          }}
-          className={`w-5 h-5 rounded-full mr-4 flex-shrink-0 transition-colors ${
-            schedule.active
-              ? "bg-green-500 hover:bg-green-600"
-              : "bg-gray-300 hover:bg-gray-400"
-          }`}
-        ></div>
-        <div className="flex flex-col flex-grow min-w-0">
-          <h2 className="text-base font-semibold text-gray-800 truncate">
-            {schedule.title}
-          </h2>
-          <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 sm:gap-4">
-            <div className="hidden sm:flex">
-              <ScheduleTypeBadge config={schedule.schedule_config} />
-            </div>
-            <div className="hidden sm:flex">
-              <ActionBadge config={schedule.action_config} />
-            </div>
-            <div className="flex items-center">
-              <ClockIcon className="w-4 h-4 mr-1" />
-              <span className="truncate">{displayTime}</span>
-            </div>
+        onClick={(e) => {
+          e.stopPropagation();
+          handleActiveToggle();
+        }}
+        className={`w-5 h-5 rounded-full mr-4 flex-shrink-0 transition-colors ${
+          schedule.active
+            ? "bg-green-500 hover:bg-green-600"
+            : "bg-gray-300 hover:bg-gray-400"
+        }`}
+      ></div>
+      <div className="flex flex-col flex-grow min-w-0">
+        <h2 className="text-base font-semibold text-gray-800 truncate">
+          {schedule.title}
+        </h2>
+        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 sm:gap-4">
+          <div className="hidden sm:flex">
+            <ScheduleTypeBadge config={schedule.schedule_config} />
+          </div>
+          <div className="hidden sm:flex">
+            <ActionBadge config={schedule.action_config} />
+          </div>
+          <div className="flex items-center">
+            <ClockIcon className="w-4 h-4 mr-1" />
+            <span className="truncate">{displayTime}</span>
           </div>
         </div>
-        <div className="hidden sm:flex items-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDuplicate();
-            }}
-            className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <DocumentDuplicateIcon className="w-5 h-5 text-gray-500" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (window.confirm("정말로 이 스케줄을 삭제하시겠습니까?")) {
-                handleDelete();
-              }
-            }}
-            className="ml-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <TrashIcon className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
       </div>
-
-      {isModalOpen && !isClosed && (
-        <ScheduleFormModal onClose={closeModal} schedule={schedule} />
-      )}
-    </>
+      <div className="hidden sm:flex items-center">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDuplicate();
+          }}
+          className="ml-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <DocumentDuplicateIcon className="w-5 h-5 text-gray-500" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm("정말로 이 스케줄을 삭제하시겠습니까?")) {
+              handleDelete();
+            }
+          }}
+          className="ml-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <TrashIcon className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+    </div>
   );
 }

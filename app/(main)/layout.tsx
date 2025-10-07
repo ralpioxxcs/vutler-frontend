@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Sidebar } from '@/components/sidebar';
 import { ProfileDropdown } from '@/components/ProfileDropdown';
-import CreateScheduleFab from '@/components/CreateScheduleFab';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Button } from '@heroui/react';
 import { Spinner } from '@heroui/spinner';
@@ -63,7 +62,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         >
           {children}
         </main>
-        {pathname === '/schedule-list' && <CreateScheduleFab />}
       </div>
     </div>
   );
@@ -81,9 +79,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center">
-        <Spinner size="lg" />
-        <p className="mt-4 text-gray-600">로딩 중...</p>
+      <div className='min-h-screen flex flex-col justify-center items-center'>
+        <Spinner size='lg' />
+        <p className='mt-4 text-gray-600'>로딩 중...</p>
       </div>
     );
   }

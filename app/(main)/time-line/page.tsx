@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import TodayTimeline from "@/components/TodayTimeline";
-import TodayScheduleModal from "@/components/TodayScheduleModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSchedulesByDate, copySchedulesByDate } from "@/pages/api/schedule";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DocumentDuplicateIcon,
+  PlusIcon,
 } from "@heroicons/react/24/solid";
 import {
   Button,
@@ -18,7 +19,9 @@ import {
   ModalFooter,
   ModalHeader,
   Input,
+  Switch,
 } from "@heroui/react";
+import { ArrowDownIcon } from "@heroicons/react/24/outline";
 
 const CopyScheduleModal = ({
   isOpen,
@@ -87,12 +90,11 @@ const CopyScheduleModal = ({
 };
 
 export default function TodaySchedulePage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  const [selectedTime, setSelectedTime] = useState<string | undefined>(
-    undefined,
-  );
+  const [compactMode, setCompactMode] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const getKSTDateString = () => {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -130,15 +132,43 @@ export default function TodaySchedulePage() {
     enabled: !!selectedDate,
   });
 
-  const handleTimeClick = (hour: number) => {
-    const formattedHour = String(hour).padStart(2, "0");
-    setSelectedTime(`${formattedHour}:00`);
-    setIsModalOpen(true);
+  const scheduleCount = useMemo(() => schedules.length, [schedules]);
+
+  // Auto-scroll to current time on initial load
+  useEffect(() => {
+    if (selectedDate === getKSTDateString() && timelineRef.current) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      // Scroll to current hour minus 2 hours for better context
+      const targetHour = Math.max(0, currentHour - 2);
+      const hourElement = timelineRef.current.querySelector(
+        `[data-hour="${targetHour}"]`,
+      );
+      if (hourElement) {
+        setTimeout(() => {
+          hourElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+    }
+  }, [selectedDate]);
+
+  const scrollToCurrentTime = () => {
+    if (timelineRef.current) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const hourElement = timelineRef.current.querySelector(
+        `[data-hour="${currentHour}"]`,
+      );
+      if (hourElement) {
+        hourElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedTime(undefined);
+  const handleTimeClick = (hour: number) => {
+    const formattedHour = String(hour).padStart(2, "0");
+    const time = `${formattedHour}:00`;
+    router.push(`/schedule/new?date=${selectedDate}&time=${time}`);
   };
 
   const changeDay = (amount: number) => {
@@ -153,7 +183,7 @@ export default function TodaySchedulePage() {
 
   return (
     <div className="relative h-full py-2">
-      <div className="flex justify-center items-center mb-6">
+      <div className="flex justify-center items-center mb-4">
         <div className="flex items-center gap-4 bg-white p-2 rounded-lg shadow-md dark:bg-gray-800">
           <button
             onClick={() => changeDay(-1)}
@@ -194,6 +224,16 @@ export default function TodaySchedulePage() {
             <DocumentDuplicateIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
           </button>
 
+          <button
+            onClick={() =>
+              router.push(`/schedule/new?date=${selectedDate}`)
+            }
+            aria-label="Create new schedule"
+            className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+          >
+            <PlusIcon className="h-6 w-6" />
+          </button>
+
           <input
             ref={dateInputRef}
             type="date"
@@ -205,21 +245,44 @@ export default function TodaySchedulePage() {
         </div>
       </div>
 
-      <TodayTimeline
-        schedules={schedules}
-        isLoading={isLoading}
-        onTimeClick={handleTimeClick}
-        isToday={selectedDate === getKSTDateString()}
-        date={selectedDate}
-      />
+      {/* Quick Stats & Controls */}
+      <div className="flex justify-between items-center px-4 mb-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200">
+            <span className="text-sm font-semibold text-blue-700">
+              {scheduleCount}개 스케줄
+            </span>
+          </div>
+          <Switch
+            size="sm"
+            isSelected={compactMode}
+            onValueChange={setCompactMode}
+          >
+            <span className="text-xs text-gray-600">축약 보기</span>
+          </Switch>
+        </div>
+        {selectedDate === getKSTDateString() && (
+          <button
+            onClick={scrollToCurrentTime}
+            className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-medium rounded-full hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm"
+            aria-label="현재 시간으로 이동"
+          >
+            <ArrowDownIcon className="w-3 h-3" />
+            현재 시간
+          </button>
+        )}
+      </div>
 
-      {isModalOpen && (
-        <TodayScheduleModal
-          onClose={handleCloseModal}
-          initialTime={selectedTime}
-          initialDate={selectedDate}
+      <div ref={timelineRef} className="overflow-y-auto">
+        <TodayTimeline
+          schedules={schedules}
+          isLoading={isLoading}
+          onTimeClick={handleTimeClick}
+          isToday={selectedDate === getKSTDateString()}
+          date={selectedDate}
+          compactMode={compactMode}
         />
-      )}
+      </div>
 
       <CopyScheduleModal
         isOpen={isCopyModalOpen}
