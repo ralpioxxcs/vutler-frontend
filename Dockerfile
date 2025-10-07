@@ -13,6 +13,8 @@ COPY . .
 ENV NEXT_PUBLIC_SCHEDULE_SERVER="http://vutler-node3.siberian-city.ts.net:4000"
 ENV NEXT_PUBLIC_DEVICE_SERVER="http://vutler-node4.siberian-city.ts.net:4001"
 ENV NEXT_PUBLIC_TTS_SERVER="http://vutler-node2.siberian-city.ts.net:4002"
+ENV NEXT_PUBLIC_USER_SERVER="http://vutler-node3.siberian-city.ts.net:5000"
+ENV NEXT_PUBLIC_AUTH_SERVER="http://vutler-node3.siberian-city.ts.net:5000"
 
 RUN pnpm run build
 
