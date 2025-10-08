@@ -1,6 +1,14 @@
 "use client";
 
-import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
 import { Spinner } from "@heroui/react";
 import TodayScheduleCard from "./TodayScheduleCard";
@@ -50,6 +58,21 @@ const TodayTimeline = ({
   const currentHour = now.getHours();
   const queryClient = useQueryClient();
   const [activeDragItem, setActiveDragItem] = useState(null);
+
+  // Configure sensors for both mouse and touch with activation constraints
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before activating drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // 250ms delay before drag activates
+        tolerance: 5, // Allow 5px of movement during delay
+      },
+    })
+  );
 
   const { mutate: updateScheduleMutation } = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
@@ -138,6 +161,7 @@ const TodayTimeline = ({
 
   return (
     <DndContext
+      sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

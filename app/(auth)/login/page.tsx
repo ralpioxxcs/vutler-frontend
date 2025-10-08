@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { login } from '@/pages/api/auth';
+import { getMyInfo } from '@/hooks/newUser';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +21,12 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      await queryClient.invalidateQueries({ queryKey: ['me'] });
-      router.push('/'); // Redirect to main page on successful login
+      // Fetch user info and set it in the cache before navigation
+      const userData = await getMyInfo();
+      queryClient.setQueryData(['me'], userData);
+      // Use replace instead of push and refresh to ensure proper navigation
+      router.replace('/');
+      router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -22,12 +22,24 @@ import {
   CheckIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import type { ScheduleType } from 'Type';
+import { daysOfWeek } from '@/config';
 
 const getCurrentTime = () => {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   return `${hours}:${minutes}`;
+};
+
+const getCurrentDateTimeLocal = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const formatSeconds = (seconds: number) => {
@@ -62,12 +74,17 @@ export default function NewSchedulePage() {
   const [youtubeVideoTitle, setYoutubeVideoTitle] = useState('');
   const [playbackRange, setPlaybackRange] = useState<[number, number]>([0, 60]);
   const [totalDuration, setTotalDuration] = useState<number | null>(null);
-  const [executionTime, setExecutionTime] = useState(initialTime);
-  const [executionDate, setExecutionDate] = useState(
-    initialDate ||
-    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }),
-  );
   const [volume, setVolume] = useState(50);
+  
+  // Schedule type states
+  const [scheduleType, setScheduleType] = useState<ScheduleType>('ONE_TIME');
+  const [oneTimeDateTime, setOneTimeDateTime] = useState(
+    initialDate && initialTime
+      ? `${initialDate}T${initialTime}`
+      : getCurrentDateTimeLocal()
+  );
+  const [recurringDays, setRecurringDays] = useState<string[]>([]);
+  const [executionTime, setExecutionTime] = useState(initialTime);
 
   const startTime = playbackRange[0];
   const duration = playbackRange[1] - playbackRange[0];
@@ -114,9 +131,12 @@ export default function NewSchedulePage() {
     mutationFn: createSchedule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['main'] });
-      queryClient.invalidateQueries({
-        queryKey: ['schedulesByDate', executionDate],
-      });
+      if (scheduleType === 'ONE_TIME') {
+        const date = oneTimeDateTime.split('T')[0];
+        queryClient.invalidateQueries({
+          queryKey: ['schedulesByDate', date],
+        });
+      }
       alert('스케줄이 생성되었습니다!');
       router.back();
     },
@@ -142,7 +162,10 @@ export default function NewSchedulePage() {
       return;
     }
 
-    const datetime = `${executionDate}T${executionTime}:00`;
+    if (scheduleType === 'RECURRING' && recurringDays.length === 0) {
+      alert('반복할 요일을 선택해주세요.');
+      return;
+    }
 
     const actionConfig =
       actionType === 'TTS'
@@ -161,13 +184,26 @@ export default function NewSchedulePage() {
           volume,
         };
 
+    const scheduleConfig =
+      scheduleType === 'ONE_TIME'
+        ? {
+            type: 'ONE_TIME',
+            datetime: `${oneTimeDateTime}:00`,
+          }
+        : scheduleType === 'RECURRING'
+        ? {
+            type: 'RECURRING',
+            days: recurringDays,
+            time: executionTime,
+          }
+        : {
+            type: 'HOURLY',
+          };
+
     const scheduleData = {
       title: title || (actionType === 'TTS' ? ttsText : youtubeVideoTitle),
       action_config: actionConfig,
-      schedule_config: {
-        type: 'ONE_TIME',
-        datetime,
-      },
+      schedule_config: scheduleConfig,
       active: true,
     };
 
@@ -201,26 +237,77 @@ export default function NewSchedulePage() {
 
       {/* Content */}
       <div className='max-w-2xl mx-auto p-4 space-y-6 pb-20'>
-        {/* Date and Time Section */}
+        {/* Schedule Type Section */}
         <div className='bg-white rounded-lg shadow-sm p-5 space-y-4'>
           <h2 className='text-lg font-semibold text-gray-800 mb-3'>
-            실행 시간
+            스케줄 타입
           </h2>
-          <Input
-            label='날짜'
-            type='date'
-            value={executionDate}
-            onChange={(e) => setExecutionDate(e.target.value)}
+          <Select
+            label='언제 실행할까요?'
+            selectedKeys={[scheduleType]}
+            onChange={(e) => setScheduleType(e.target.value as ScheduleType)}
             className='text-base'
-          />
-          <Input
-            label='시간'
-            type='time'
-            value={executionTime}
-            onChange={(e) => setExecutionTime(e.target.value)}
-            className='text-base'
-          />
+          >
+            <SelectItem key='ONE_TIME'>한 번만 실행 (이벤트)</SelectItem>
+            <SelectItem key='RECURRING'>반복 실행 (루틴)</SelectItem>
+            <SelectItem key='HOURLY'>정각마다 실행</SelectItem>
+          </Select>
         </div>
+
+        {/* Date and Time Section */}
+        {scheduleType === 'ONE_TIME' && (
+          <div className='bg-white rounded-lg shadow-sm p-5 space-y-4'>
+            <h2 className='text-lg font-semibold text-gray-800 mb-3'>
+              실행 시간
+            </h2>
+            <Input
+              label='날짜 및 시간'
+              type='datetime-local'
+              value={oneTimeDateTime}
+              onChange={(e) => setOneTimeDateTime(e.target.value)}
+              className='text-base'
+            />
+          </div>
+        )}
+
+        {scheduleType === 'RECURRING' && (
+          <div className='bg-white rounded-lg shadow-sm p-5 space-y-4'>
+            <h2 className='text-lg font-semibold text-gray-800 mb-3'>
+              반복 설정
+            </h2>
+            <Input
+              label='실행 시간'
+              type='time'
+              value={executionTime}
+              onChange={(e) => setExecutionTime(e.target.value)}
+              className='text-base'
+            />
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                반복할 요일
+              </label>
+              <div className='flex flex-wrap gap-2'>
+                {daysOfWeek.map((day) => (
+                  <Button
+                    key={day}
+                    size='sm'
+                    color={recurringDays.includes(day) ? 'primary' : 'default'}
+                    variant={recurringDays.includes(day) ? 'solid' : 'bordered'}
+                    onPress={() =>
+                      setRecurringDays((days) =>
+                        days.includes(day)
+                          ? days.filter((d) => d !== day)
+                          : [...days, day]
+                      )
+                    }
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Title Section */}
         <div className='bg-white rounded-lg shadow-sm p-5'>

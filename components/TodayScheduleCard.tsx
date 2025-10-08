@@ -109,8 +109,9 @@ export default function TodayScheduleCard({
       <div
         {...listeners}
         {...attributes}
-        className="mr-2 p-1 cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded transition-colors"
+        className="mr-2 p-1 cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded transition-colors touch-none"
         title="드래그하여 시간 변경"
+        style={{ touchAction: 'none' }}
       >
         <Bars3Icon className="w-4 h-4 text-gray-400" />
       </div>
